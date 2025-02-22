@@ -16,6 +16,56 @@ class MapView:
         self.height = height
         self.transform = transform
 
+# ===== COLOR
+
+class Color:
+
+    def __init__(self, red : float, green : float, blue : float):
+        self._rgb = (red, green, blue)
+
+    def as_hex(self):
+        return '#' + ''.join([ourhex(int(round(v * 255))) for v in self._rgb])
+
+    def as_int_tuple(self, scale):
+        return tuple([int(round(v * scale)) for v in self._rgb])
+
+RE_RGB_EXPR = re.compile('rgb\\(([0-9]+)%,\\s*([0-9]+)%,\\s*([0-9]+)%\\)')
+RE_RGB_HEX = re.compile('#[A-Fa-f0-9]{6}')
+
+def to_color(spec):
+    if spec == None:
+        return None
+
+    m = RE_RGB_EXPR.match(spec)
+    if m:
+        return Color(int(m.group(1)) / 100,
+                     int(m.group(2)) / 100,
+                     int(m.group(3)) / 100)
+
+    m = RE_RGB_HEX.match(spec)
+    if m:
+        return Color(unhex(spec[1 : 3]) / 255,
+                     unhex(spec[3 : 5]) / 255,
+                     unhex(spec[5 : 7]) / 255)
+
+    if spec == 'black':
+        return Color(0, 0, 0)
+    elif spec == 'white':
+        return Color(1, 1, 1)
+    assert False, 'Unsupported spec: %s' % spec
+
+def ourhex(num):
+    return hex(num)[2 : ].zfill(2)
+
+def unhex(h):
+    return _unhexdigit(h[0]) * 16 + _unhexdigit(h[1])
+
+def _unhexdigit(digit):
+    if digit >= '0' and digit <= '9':
+        return int(digit)
+    else:
+        return ord(digit.lower()) - 87
+
 # ===== TEXT STYLE
 # for formatting
 
@@ -49,10 +99,16 @@ class TextStyle:
 
 # ===== LINE FORMAT
 
+def to_line_format(line_color: str, line_width: float):
+    if line_color and line_width:
+        return LineFormat(to_color(line_color), line_width)
+    else:
+        return None
+
 class LineFormat:
 
-    def __init__(self, line_color, line_width):
-        self._line_color = to_color(line_color)
+    def __init__(self, line_color: Color, line_width: float):
+        self._line_color = line_color
         self._line_width = line_width
 
     def get_line_color(self):
@@ -77,53 +133,6 @@ class Marker:
 
     def get_shape(self):
         return Shape.CIRCLE
-
-# ===== COLOR
-
-class Color:
-
-    def __init__(self, red : float, green : float, blue : float):
-        self._rgb = (red, green, blue)
-
-    def as_hex(self):
-        return '#' + ''.join([ourhex(int(round(v * 255))) for v in self._rgb])
-
-    def as_int_tuple(self, scale):
-        return tuple([int(round(v * scale)) for v in self._rgb])
-
-RE_RGB_EXPR = re.compile('rgb\\(([0-9]+)%,\\s*([0-9]+)%,\\s*([0-9]+)%\\)')
-RE_RGB_HEX = re.compile('#[A-Fa-f0-9]{6}')
-
-def to_color(spec):
-    m = RE_RGB_EXPR.match(spec)
-    if m:
-        return Color(int(m.group(1)) / 100,
-                     int(m.group(2)) / 100,
-                     int(m.group(3)) / 100)
-
-    m = RE_RGB_HEX.match(spec)
-    if m:
-        return Color(unhex(spec[1 : 3]) / 255,
-                     unhex(spec[3 : 5]) / 255,
-                     unhex(spec[5 : 7]) / 255)
-
-    if spec == 'black':
-        return Color(0, 0, 0)
-    elif spec == 'white':
-        return Color(1, 1, 1)
-    assert False, 'Unsupported spec: %s' % spec
-
-def ourhex(num):
-    return hex(num)[2 : ].zfill(2)
-
-def unhex(h):
-    return _unhexdigit(h[0]) * 16 + _unhexdigit(h[1])
-
-def _unhexdigit(digit):
-    if digit >= '0' and digit <= '9':
-        return int(digit)
-    else:
-        return ord(digit.lower()) - 87
 
 # ===== LEGEND
 
@@ -170,3 +179,26 @@ class MapDecorator:
 
     def get_shapes(self):
         return self._shapes
+
+# ===== LAYERS
+
+class ShapeLayer:
+
+    def __init__(self, geometry_file: str, line: LineFormat, fill_color: Color,
+                 selectors : list):
+        self._geometry_file = geometry_file
+        self._line = line
+        self._fill_color = fill_color
+        self._selectors = selectors
+
+    def get_geometry_file(self):
+        return self._geometry_file
+
+    def get_line_format(self):
+        return self._line
+
+    def get_fill_color(self):
+        return self._fill_color
+
+    def get_selectors(self):
+        return self._selectors

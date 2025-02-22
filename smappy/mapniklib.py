@@ -5,135 +5,102 @@ import pymapnik3
 
 # --- MAPNIK INITIALIZATION
 
+# FIXME: pymapnik should take care of this for us
 pymapnik3.register_datasources('/usr/local/lib/mapnik/input/')
 for font in glob.glob('/usr/local/lib/mapnik/fonts/*.ttf'):
     pymapnik3.register_font(font)
 
 # --- STUFF
 
-class MapnikMapImplementation:
-    def __init__(self, mapview: mapbase.MapView):
-        pass
+class MapnikMap:
+    def __init__(self, mapview: mapbase.MapView, background_color: str = None):
+        self._view = mapview
+        self._background = mapbase.to_color(background_color or '#88CCFF')
+        self._layers = []
+        self._symbols = [] # legend gets built from this
+        self._legend = None
+        self._labels = []
 
-class MapnikChoroplethMap:
-    def __init__(self, mapview: mapbase.MapView, levels: int = 10):
-        self._map_view = mapview
-        self._decorator = mapbase.MapDecorator()
-        self._levels = levels
-        self._region_file = None
-        self._region_mapping = None
+    def add_shapes(self,
+                   geometry_file: str,
+                   line_color: str = None,
+                   line_width: float = None,
+                   fill_color: str = None,
+                   selectors: list = None):
+        line = mapbase.to_line_format(line_color, line_width)
+        self._layers.append(mapbase.ShapeLayer(geometry_file, line,
+                                               mapbase.to_color(fill_color),
+                                               selectors))
 
-        # formatting properties
-        self._background = '#FFFFFF'
-        self._undefined_color = mapbase.Color(0.6, 0.6, 0.6)
-        self._border_format = mapbase.LineFormat('rgb(5%,5%,5%)', 0.2)
-        self._label_formatter = lambda low, high: '%s - %s' % (low, high)
+    # this is entirely based on add_shapes -- no fundamental code
+    def add_choropleth(self,
+                       geometry_file: str,
+                       region_mapping: list,
+                       line_color: str = None,
+                       line_width: float = None,
+                       undefined_color: str = None,
+                       levels: int = 10,
+                       label_formatter = None):
+        line = mapbase.to_line_format(line_color, line_width)
+        undefined_color = mapbase.to_color(undefined_color) or \
+            mapbase.Color(0.6, 0.6, 0.6)
+        label_formatter = label_formatter or \
+            (lambda low, high: '%s - %s' % (low, high))
 
-    def get_decorator(self):
-        return self._decorator
-
-    def set_region_file(self, filename: str):
-        self._region_file = filename
-
-    def set_region_mapping(self, mapping: list[tuple]):
-        '''mapping: list of (idproperty, idvalue, numvalue). None means value
-        not known, will be filled with _undefined_color'''
-        self._region_mapping = mapping
-
-    # --- formatting
-
-    def set_background_color(self, color):
-        self._background = color
-
-    def set_border_format(self, line_color, line_width):
-        self._border_format = mapbase.LineFormat(line_color, line_width)
-
-    def set_label_formatter(self, label_formatter):
-        self._label_formatter = label_formatter
-
-    # --- render
-
-    def render_to(self, filename: str):
-        values = [v for (_, _, v) in self._region_mapping if v != None]
+        values = [v for (_, _, v) in region_mapping if v != None]
         lowest = min(values)
         biggest = max(values)
-        inc = (biggest - lowest) / float(self._levels)
+        inc = (biggest - lowest) / levels
 
-        colormapping = []
-        colors = make_color_scale(self._levels)
-        for (idprop, idvalue, value) in self._region_mapping:
+        colormapping = {}
+        colors = make_color_scale(levels)
+        for (idprop, idvalue, value) in region_mapping:
             ix = int(round((value - lowest) / inc)) if value != None else None
-            color = colors[ix] if ix != None else self._undefined_color
-            colormapping.append((idprop, idvalue, color))
+            color = colors[ix] if ix != None else undefined_color
 
-        render_colored_region_map(filename, self._map_view, self._background,
-                                  colormapping, self._region_file,
-                                  self._decorator, self._border_format)
+            if not color in colormapping:
+                colormapping[color] = []
+            colormapping[color].append((idprop, idvalue))
 
-        symbols = []
-        for ix in range(self._levels):
+        for (color, selectors) in colormapping.items():
+            self._layers.append(mapbase.ShapeLayer(
+                geometry_file, line, color, selectors
+            ))
+
+        for (ix, color) in enumerate(colors):
             low = lowest + (ix * inc)
             high = lowest + ((ix+1) * inc)
-            label = self._label_formatter(low, high)
-            symbols.append(mapbase.Marker(fill_color = colors[ix],
-                                          label = label))
+            label = label_formatter(low, high)
+            self._symbols.append(mapbase.Marker(fill_color = colors[ix],
+                                                label = label))
 
-        legend = self._decorator.get_legend()
-        if legend:
-            add_legend(filename, symbols, legend)
+    def add_text_label(self, text: str, lat: float, lng: float, style):
+        self._labels.append((text, lat, lng, style))
 
-def render_colored_region_map(filename, view, background, colormapping,
-                              region_file, decorator, border_format):
-    m = pymapnik3.Map(view.width, view.height)
-    ctx = pymapnik3.Context()
+    def set_legend(self, legend):
+        if legend is True:
+            legend = mapbase.Legend()
+        self._legend = legend
 
-    m.set_srs('+proj=merc +ellps=WGS84 +datum=WGS84 +no_defs')
-    m.set_background(pymapnik3.Color(background))
+    def render_to(self, filename: str):
+        m = pymapnik3.Map(self._view.width, self._view.height)
+        ctx = pymapnik3.Context()
+        m.set_srs('+proj=merc +ellps=WGS84 +datum=WGS84 +no_defs')
+        m.set_background(mapnik_color(self._background))
 
-    s = pymapnik3.Style() # style object to hold rules
+        for layer in self._layers:
+            render_layer(m, ctx, layer)
 
-    for (prop, value, color) in colormapping:
-        rule = make_region_rule(color, border_format)
-        rule.set_filter(pymapnik3.Expression("[%s] = '%s'" % (
-            prop, value)
-        ))
-        s.add_rule(rule) # now add the rule to the style
+        styles = set([style for (_, _, _, style) in self._labels])
+        render_text_labels(m, ctx, styles, self._labels)
 
-    m.add_style('My Style',s)
+        zoom_to_box(m, self._view)
+        pymapnik3.render_to_file(m, filename, 'PNG')
 
-    if region_file.endswith('.json'):
-        ds = pymapnik3.GeoJSON(region_file)
-    elif region_file.endswith('.shp'):
-        ds = pymapnik3.Shapefile(region_file)
-    else:
-        assert False, 'Unknown region file format: %s' % region_file
-    layer = pymapnik3.Layer('world')
+        if self._legend:
+            add_legend(filename, self._symbols, self._legend)
 
-    layer.set_datasource(ds)
-    layer.set_srs('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
-    layer.add_style('My Style')
-
-    m.add_layer(layer)
-
-    add_decorator(m, ctx, decorator)
-
-    zoom_to_box(m, view)
-
-    pymapnik3.render_to_file(m, filename, 'PNG')
-
-def make_region_rule(color, border_format):
-    r = pymapnik3.Rule() # rule object to hold symbolizers
-    # to fill a polygon we create a PolygonSymbolizer
-    polygon_symbolizer = pymapnik3.PolygonSymbolizer()
-    polygon_symbolizer.set_fill(mapnik_color(color))
-    r.add_symbolizer(polygon_symbolizer) # add the symbolizer to the rule object
-
-    # to add outlines to a polygon we create a LineSymbolizer
-    line_symbolizer = pymapnik3.LineSymbolizer()
-    line_symbolizer.set_stroke(mapnik_color(border_format.get_line_color()))
-    line_symbolizer.set_stroke_width(border_format.get_line_width())
-    r.add_symbolizer(line_symbolizer) # add the symbolizer to the rule object
-    return r
+# ===== CHOROPLETH HELPERS
 
 def make_color_scale(count):
     import colormaps
@@ -146,25 +113,64 @@ def make_color_scale(count):
         for ix in range(count + 1)
     ]
 
-def project(srs, west, south, east, north):
-    source = pymapnik3.Projection('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
-    target = pymapnik3.Projection(srs)
-    trans = pymapnik3.ProjTransform(source, target)
-    thebox = pymapnik3.Box2d(west, south, east, north)
-    return trans.forward(thebox)
+# ===== RENDERING
 
-def zoom_to_box(themap, view):
-    # the box is defined in degrees when passed in to us, but now that
-    # the projection is Mercator, the bounding box must be specified
-    # in metres (no, I don't know why). we solve this by explicitly
-    # converting degrees to metres
-    themap.zoom_to_box(project(themap.get_srs(), view.west, view.south,
-                               view.east, view.north))
+def render_layer(m, ctx, layer):
+    theid = 'id' + str(id(layer))
 
-def add_decorator(m, ctx, decorator):
+    if isinstance(layer, mapbase.ShapeLayer):
+        s = pymapnik3.Style() # style object to hold rules
+        r = pymapnik3.Rule() # rule object to hold symbolizers
+
+        expression = build_expression(layer.get_selectors())
+        if expression:
+            r.set_filter(expression)
+
+        line = layer.get_line_format()
+        if line:
+            line_symbolizer = pymapnik3.LineSymbolizer()
+            line_symbolizer.set_stroke(mapnik_color(line.get_line_color()))
+            line_symbolizer.set_stroke_width(line.get_line_width())
+            r.add_symbolizer(line_symbolizer)
+            s.add_rule(r)
+
+        if layer.get_fill_color():
+            polygon_symbolizer = pymapnik3.PolygonSymbolizer()
+            polygon_symbolizer.set_fill(mapnik_color(layer.get_fill_color()))
+            r.add_symbolizer(polygon_symbolizer)
+            s.add_rule(r)
+
+        m.add_style('ShapeStyle%s' % theid, s)
+
+        geometry_file = layer.get_geometry_file()
+        if geometry_file.endswith('.shp'):
+            ds = pymapnik3.Shapefile(geometry_file)
+        else:
+            ds = pymapnik3.GeoJSON(geometry_file)
+        layer = pymapnik3.Layer('shapes%s' % theid)
+
+        layer.set_datasource(ds)
+        layer.set_srs('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
+        layer.add_style('ShapeStyle%s' % theid)
+
+        m.add_layer(layer)
+
+    else:
+        assert False
+
+def build_expression(selectors: list):
+    if not selectors:
+        return None
+
+    expr = ' or '.join(["[%s] = '%s'" % (prop, val)
+                        for (prop, val)
+                        in selectors])
+    return pymapnik3.Expression(expr)
+
+def render_text_labels(m, ctx, text_styles, labels):
     # ===== TEXT STYLES
     s = pymapnik3.Style()
-    for tstyle in decorator.get_text_styles():
+    for tstyle in text_styles:
         r = pymapnik3.Rule()
         r.set_filter(pymapnik3.Expression("[style] = '%s'" % tstyle.get_id()))
 
@@ -182,7 +188,7 @@ def add_decorator(m, ctx, decorator):
     # ===== TEXTS
     ds = pymapnik3.MemoryDatasource()
 
-    for (text, lat, lon, style) in decorator.get_text_labels():
+    for (text, lat, lon, style) in labels:
         f = pymapnik3.parse_from_geojson(json.dumps({
             "type": "Feature",
             "geometry": {
@@ -202,32 +208,20 @@ def add_decorator(m, ctx, decorator):
     l.add_style('text_style')
     m.add_layer(l)
 
-    # ===== SHAPES
-    for (ix, (geometry_file, line_format)) in enumerate(decorator.get_shapes()):
-        s = pymapnik3.Style() # style object to hold rules
+def project(srs, west, south, east, north):
+    source = pymapnik3.Projection('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
+    target = pymapnik3.Projection(srs)
+    trans = pymapnik3.ProjTransform(source, target)
+    thebox = pymapnik3.Box2d(west, south, east, north)
+    return trans.forward(thebox)
 
-        r = pymapnik3.Rule() # rule object to hold symbolizers
-
-        # to add outlines to a polygon we create a LineSymbolizer
-        line_symbolizer = pymapnik3.LineSymbolizer()
-        line_symbolizer.set_stroke(mapnik_color(line_format.get_line_color()))
-        line_symbolizer.set_stroke_width(line_format.get_line_width())
-        r.add_symbolizer(line_symbolizer) # add the symbolizer to the rule object
-        s.add_rule(r) # now add the rule to the style
-
-        m.add_style('ShapeStyle%s' % ix, s)
-
-        if geometry_file.endswith('.shp'):
-            ds = pymapnik3.Shapefile(geometry_file)
-        else:
-            ds = pymapnik3.GeoJSON(geometry_file)
-        layer = pymapnik3.Layer('shapes%s' % ix)
-
-        layer.set_datasource(ds)
-        layer.set_srs('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
-        layer.add_style('ShapeStyle%s' % ix)
-
-        m.add_layer(layer)
+def zoom_to_box(themap, view):
+    # the box is defined in degrees when passed in to us, but now that
+    # the projection is Mercator, the bounding box must be specified
+    # in metres (no, I don't know why). we solve this by explicitly
+    # converting degrees to metres
+    themap.zoom_to_box(project(themap.get_srs(), view.west, view.south,
+                               view.east, view.north))
 
 def add_legend(filename, used_symbols, legend):
     from PIL import Image, ImageDraw, ImageFont
