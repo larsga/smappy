@@ -19,9 +19,10 @@ class MapnikMap(mapbase.AbstractMap):
                    geometry_file: str,
                    line_color: Optional[str] = None,
                    line_width: Optional[float] = None,
+                   line_dash: Optional[tuple] = None,
                    fill_color: Optional[str] = None,
                    selectors: Optional[list] = None):
-        line = mapbase.to_line_format(line_color, line_width)
+        line = mapbase.to_line_format(line_color, line_width, line_dash)
         self._layers.append(mapbase.ShapeLayer(geometry_file, line,
                                                mapbase.to_color(fill_color),
                                                selectors))
@@ -74,6 +75,10 @@ def render_layer(m, ctx, layer):
             line_symbolizer = pymapnik3.LineSymbolizer()
             line_symbolizer.set_stroke(mapnik_color(line.get_line_color()))
             line_symbolizer.set_stroke_width(line.get_line_width())
+            dash = line.get_line_dash()
+            if dash:
+                (length, gap) = dash
+                line_symbolizer.set_stroke_dash(length, gap)
             r.add_symbolizer(line_symbolizer)
             s.add_rule(r)
 

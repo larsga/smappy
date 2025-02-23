@@ -108,23 +108,29 @@ class TextStyle:
 
 # ===== LINE FORMAT
 
-def to_line_format(line_color: Optional[str], line_width: Optional[float]):
+def to_line_format(line_color: Optional[str], line_width: Optional[float],
+                   line_dash: Optional[tuple] = None):
     if line_color and line_width:
-        return LineFormat(to_color(line_color), line_width)
+        return LineFormat(to_color(line_color), line_width, line_dash)
     else:
         return None
 
 class LineFormat:
 
-    def __init__(self, line_color: Color, line_width: float):
+    def __init__(self, line_color: Color, line_width: float,
+                 line_dash: Optional[tuple]):
         self._line_color = line_color
         self._line_width = line_width
+        self._line_dash = line_dash
 
     def get_line_color(self):
         return self._line_color
 
     def get_line_width(self):
         return self._line_width
+
+    def get_line_dash(self):
+        return self._line_dash
 
 # ===== MARKER
 
