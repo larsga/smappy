@@ -4,13 +4,6 @@ from typing import Optional
 from smappy import mapbase
 import pymapnik3
 
-# --- MAPNIK INITIALIZATION
-
-# FIXME: pymapnik should take care of this for us
-pymapnik3.register_datasources('/usr/local/lib/mapnik/input/')
-for font in glob.glob('/usr/local/lib/mapnik/fonts/*.ttf'):
-    pymapnik3.register_font(font)
-
 # --- STUFF
 
 class MapnikMap(mapbase.AbstractMap):
