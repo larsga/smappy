@@ -1,9 +1,15 @@
 
 import re
 from enum import Enum
+from typing import Optional
+
+class SmappyException(Exception):
+    pass
 
 class Shape(Enum):
     CIRCLE = 1
+    SQUARE = 2
+    TRIANGLE = 3
 
 class MapView:
     def __init__(self, east, west, south, north, width = 2000, height = 1200,
@@ -32,9 +38,12 @@ class Color:
 RE_RGB_EXPR = re.compile('rgb\\(([0-9]+)%,\\s*([0-9]+)%,\\s*([0-9]+)%\\)')
 RE_RGB_HEX = re.compile('#[A-Fa-f0-9]{6}')
 
-def to_color(spec):
+def to_color(spec: Optional[str|Color]) -> Optional[Color]:
     if spec == None:
         return None
+
+    if isinstance(spec, Color):
+        return spec
 
     m = RE_RGB_EXPR.match(spec)
     if m:
@@ -52,7 +61,7 @@ def to_color(spec):
         return Color(0, 0, 0)
     elif spec == 'white':
         return Color(1, 1, 1)
-    assert False, 'Unsupported spec: %s' % spec
+    raise SmappyException('Cannot parse color: "%s"' % spec)
 
 def ourhex(num):
     return hex(num)[2 : ].zfill(2)
@@ -99,7 +108,7 @@ class TextStyle:
 
 # ===== LINE FORMAT
 
-def to_line_format(line_color: str, line_width: float):
+def to_line_format(line_color: Optional[str], line_width: Optional[float]):
     if line_color and line_width:
         return LineFormat(to_color(line_color), line_width)
     else:
@@ -121,9 +130,13 @@ class LineFormat:
 
 class Marker:
 
-    def __init__(self, fill_color, label = None):
-        self._fill_color = fill_color
+    def __init__(self, fill_color, label = None, scale:float = 5.0):
+        self._fill_color = to_color(fill_color)
         self._label = label
+        self._scale = scale
+
+    def get_id(self):
+        return 'marker%s' % id(self)
 
     def get_label(self):
         return self._label
@@ -133,6 +146,50 @@ class Marker:
 
     def get_shape(self):
         return Shape.CIRCLE
+
+    def get_show_title(self):
+        return False
+
+    def get_scale(self):
+        return self._scale
+
+    def get_line_color(self):
+        return to_color('black')
+
+    def get_line_width(self):
+        return 1
+
+    def get_text_color(self):
+        return to_color('black')
+
+class PositionedMarker:
+
+    def __init__(self, lat: float, lng: float, title, marker):
+        self._lat = float(lat)
+        self._lng = float(lng)
+        self._title = title
+        self._marker = marker
+
+    def get_id(self):
+        return 'posm%s' % id(self)
+
+    def get_latitude(self):
+        return self._lat
+
+    def get_longitude(self):
+        return self._lng
+
+    def get_title(self):
+        return self._title
+
+    def get_marker(self):
+        return self._marker
+
+    def get_description(self):
+        return None
+
+    def get_data(self):
+        return {} # not sure what this is
 
 # ===== LEGEND
 
@@ -184,8 +241,8 @@ class MapDecorator:
 
 class ShapeLayer:
 
-    def __init__(self, geometry_file: str, line: LineFormat, fill_color: Color,
-                 selectors : list):
+    def __init__(self, geometry_file: str, line: Optional[LineFormat],
+                 fill_color: Optional[Color], selectors : Optional[list]):
         self._geometry_file = geometry_file
         self._line = line
         self._fill_color = fill_color
@@ -202,3 +259,92 @@ class ShapeLayer:
 
     def get_selectors(self):
         return self._selectors
+
+# ===== BASE MAP
+
+class AbstractMap:
+
+    def __init__(self):
+        self._markers = []
+        self._symbols = [] # legend gets built from this
+        self._layers = []
+
+    def add_marker(self, lat: float, lng: float, title: str,
+                   marker: Marker):
+        self._markers.append(PositionedMarker(lat, lng, title, marker))
+
+    def get_marker_types(self):
+        return set([m.get_marker() for m in self._markers])
+
+    def get_markers(self):
+        return self._markers
+
+    # this is entirely based on add_shapes -- no fundamental code
+    def add_choropleth(self,
+                       geometry_file: str,
+                       region_mapping: list,
+                       line_color: Optional[str] = None,
+                       line_width: Optional[float] = None,
+                       undefined_color: Optional[str] = None,
+                       levels: int = 10,
+                       label_formatter = None):
+        line = to_line_format(line_color, line_width)
+        undefined_color = to_color(undefined_color) or Color(0.6, 0.6, 0.6)
+        label_formatter = label_formatter or \
+            (lambda low, high: '%s - %s' % (low, high))
+
+        values = [v for (_, _, v) in region_mapping if v != None]
+        lowest = min(values)
+        biggest = max(values)
+        inc = (biggest - lowest) / levels
+
+        colormapping = {}
+        colors = make_color_scale(levels)
+        for (idprop, idvalue, value) in region_mapping:
+            ix = int(round((value - lowest) / inc)) if value != None else None
+            color = colors[ix] if ix != None else undefined_color
+
+            if not color in colormapping:
+                colormapping[color] = []
+            colormapping[color].append((idprop, idvalue))
+
+        for (color, selectors) in colormapping.items():
+            self._layers.append(ShapeLayer(
+                geometry_file, line, color, selectors
+            ))
+
+        for (ix, color) in enumerate(colors):
+            low = lowest + (ix * inc)
+            high = lowest + ((ix+1) * inc)
+            label = label_formatter(low, high)
+            self._symbols.append(Marker(fill_color = colors[ix],
+                                        label = label))
+
+# ===== CHOROPLETH HELPERS
+
+def make_color_scale(count):
+    import colormaps
+
+    inc = int(len(colormaps._magma_data) / count)
+    return [
+        Color(*tuple([
+            x for x in colormaps._magma_data[inc * ix]
+        ]))
+        for ix in range(count + 1)
+    ]
+
+# ===== FILE NAME HANDLING
+
+def add_extension(filename, format):
+    extension = {
+        'png'   : '.png',
+        'html'  : '.html',
+        'pdf'   : '.pdf',
+        'svg'   : '.svg',
+        'latex' : '.tex',
+        'tiff'  : '.tif',
+        'docx'  : '.docx',
+    }[format]
+    if not filename.endswith(extension):
+        filename += extension
+    return filename
