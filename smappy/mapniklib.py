@@ -52,7 +52,7 @@ class MapnikMap(mapbase.AbstractMap):
         render_text_labels(m, ctx, styles, self._labels)
 
         zoom_to_box(m, self._view)
-        pymapnik3.render_to_file(m, filename, 'PNG')
+        pymapnik3.render_to_file(m, filename, format)
 
         if self._legend:
             add_legend(filename, self._symbols, self._legend)
@@ -164,7 +164,7 @@ def render_markers(m, ctx, marker_types, markers):
         l = pymapnik3.Layer('marker_layer_%s' % ix)
         l.set_clear_label_cache(True)
         l.set_datasource(ds)
-        l.add_style('symbol_%s' % id(marker.get_marker()))
+        l.add_style('symbol_%s' % marker.get_marker().get_id())
 
         m.add_layer(l)
 

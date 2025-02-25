@@ -79,6 +79,8 @@ div.infowindow {
 var mapOptions = {
   center: new google.maps.LatLng(%s, %s),
   zoom: %s,
+  cameraControl: false,
+  zoomControl: true,
   streetViewControl: false,
   mapTypeControl: false
 };
