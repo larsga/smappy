@@ -136,10 +136,13 @@ class LineFormat:
 
 class Marker:
 
-    def __init__(self, fill_color, label = None, scale:float = 5.0):
+    def __init__(self, fill_color, label = None, scale:float = None,
+                 show_title = False, text_style = None):
         self._fill_color = to_color(fill_color)
         self._label = label
         self._scale = scale
+        self._show_title = show_title # show title on the positioned marker
+        self._text_style = text_style
 
     def get_id(self):
         return 'marker%s' % id(self)
@@ -154,9 +157,12 @@ class Marker:
         return Shape.CIRCLE
 
     def get_show_title(self):
-        return False
+        return self._show_title
 
-    def get_scale(self):
+    def get_text_style(self):
+        return self._text_style
+
+    def get_scale(self) -> float:
         return self._scale
 
     def get_line_color(self):
@@ -167,6 +173,9 @@ class Marker:
 
     def get_text_color(self):
         return to_color('black')
+
+    def set_scale(self, scale: float):
+        self._scale = scale
 
 class PositionedMarker:
 

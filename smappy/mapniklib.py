@@ -46,6 +46,11 @@ class MapnikMap(mapbase.AbstractMap):
         for layer in self._layers:
             render_layer(m, ctx, layer)
 
+        default_scale = self._get_default_scale()
+        for mt in self.get_marker_types():
+            if mt.get_scale() is None:
+                mt.set_scale(default_scale)
+
         render_markers(m, ctx, self.get_marker_types(), self._markers)
 
         styles = set([style for (_, _, _, style) in self._labels])
@@ -56,6 +61,11 @@ class MapnikMap(mapbase.AbstractMap):
 
         if self._legend:
             add_legend(filename, self._symbols, self._legend)
+
+    def _get_default_scale(self) -> float:
+        size = min(self._view.height, self._view.width)
+        factor = 0.005
+        return size * factor
 
 # ===== RENDERING
 
@@ -126,14 +136,14 @@ def render_markers(m, ctx, marker_types, markers):
             sym.set_allow_overlap(True)
             sym.set_ignore_placement(True)
         else:
-            style = symbol.get_text_style()
+            style = marker.get_text_style()
             sym = pymapnik3.ShieldSymbolizer()
-            sym.set_fill(pymapnik3.Color(style.get_font_color()))
+            sym.set_fill(mapnik_color(style.get_font_color()))
             sym.set_text_size(style.get_font_size())
             sym.set_face_name(style.get_font_name())
             sym.set_name_expression('[name]')
-            sym.set_halo_fill(pymapnik3.Color(style.get_halo_color()))
-            sym.set_halo_radius(2)
+            sym.set_halo_fill(mapnik_color(style.get_halo_color()))
+            sym.set_halo_radius(style.get_halo_radius())
             sym.set_displacement(10, 0)
 
         sym.set_file(svgfile)

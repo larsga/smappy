@@ -30,6 +30,9 @@ class GoogleMap(mapbase.AbstractMap):
     def get_api_key(self):
         return self._apikey
 
+    def set_legend(self, legend):
+        pass
+
     def render_to(self, filename:str , width: str = '100%',
                   height: str = '100%', format: str = 'html'):
         if format != 'html':
@@ -194,7 +197,11 @@ function add_marker(theid, lat, lng, title, symbol, label, textcolor, data) {
     outf.close()
 
 def render_marker_type(outf, marker):
-        outf.write('''
+    # set default marker size
+    if marker.get_scale() is None:
+        marker.set_scale(5)
+
+    outf.write('''
 var %s = {
   fillColor: "%s",
   strokeColor: "%s",
