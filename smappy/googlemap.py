@@ -44,7 +44,7 @@ class GoogleMap(mapbase.AbstractMap):
 # ===== RENDERING
 
 def _to_jstr(value):
-    if value == None:
+    if value is None:
         return 'null'
 
     return "'%s'" % value.replace("'", "\\'")
@@ -164,7 +164,7 @@ function add_marker(theid, lat, lng, title, symbol, label, textcolor, data) {
     for layer in themap._layers:
         assert isinstance(layer, mapbase.ShapeLayer)
 
-        render(outf, layer)
+        render_shape(outf, layer)
 
     outf.write(u'</script>\n\n\n')
 
@@ -216,7 +216,7 @@ var %s = {
                marker.get_scale()))
 
 def render_shape(outf, shape):
-    pass
+    assert 'Shape rendering not implemented'
 #  // Define the LatLng coordinates for the polygon's path.
 #  const triangleCoords = [
 #    { lat: 25.774, lng: -80.19 },

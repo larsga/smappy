@@ -1,5 +1,5 @@
 
-import glob, json
+import json
 from typing import Optional
 from smappy import mapbase
 import pymapnik3
@@ -174,12 +174,12 @@ def render_markers(m, ctx, marker_types, markers):
 
         ds = pymapnik3.MemoryDatasource()
 
-        l = pymapnik3.Layer('marker_layer_%s' % ix)
-        l.set_clear_label_cache(True)
-        l.set_datasource(ds)
-        l.add_style('symbol_%s' % marker.get_marker().get_id())
+        layer = pymapnik3.Layer('marker_layer_%s' % ix)
+        layer.set_clear_label_cache(True)
+        layer.set_datasource(ds)
+        layer.add_style('symbol_%s' % marker.get_marker().get_id())
 
-        m.add_layer(l)
+        m.add_layer(layer)
 
         ds.add_feature(f)
 
@@ -218,11 +218,11 @@ def render_text_labels(m, ctx, text_styles, labels):
         }), ctx)
         ds.add_feature(f)
 
-    l = pymapnik3.Layer('layer_texts')
-    l.set_clear_label_cache(True)
-    l.set_datasource(ds)
-    l.add_style('text_style')
-    m.add_layer(l)
+    layer = pymapnik3.Layer('layer_texts')
+    layer.set_clear_label_cache(True)
+    layer.set_datasource(ds)
+    layer.add_style('text_style')
+    m.add_layer(layer)
 
 def project(srs, west, south, east, north):
     source = pymapnik3.Projection('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
@@ -305,7 +305,7 @@ def add_legend(filename, symbols, legend):
                 fill = symbol.get_fill_color().as_int_tuple(256)
             )
 
-        elif symbol.get_shape() == maplib.TRIANGLE:
+        elif symbol.get_shape() == mapbase.Shape.TRIANGLE:
             draw.polygon(
                 [
                     (x1 + offset + r, y1 + offset + displacement),
@@ -403,4 +403,5 @@ def generate_marker_svg(marker, svgfile):
                 ))
 
             case _:
-                raise SmappyException('Unknown shape: %s' % marker.get_shape())
+                raise mapbase.SmappyException('Unknown shape: %s' %
+                                              marker.get_shape())

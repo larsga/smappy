@@ -39,7 +39,7 @@ RE_RGB_EXPR = re.compile('rgb\\(([0-9]+)%,\\s*([0-9]+)%,\\s*([0-9]+)%\\)')
 RE_RGB_HEX = re.compile('#[A-Fa-f0-9]{6}')
 
 def to_color(spec: Optional[str|Color]) -> Optional[Color]:
-    if spec == None:
+    if spec is None:
         return None
 
     if isinstance(spec, Color):
@@ -314,7 +314,7 @@ class AbstractMap:
         label_formatter = label_formatter or \
             (lambda low, high: '%s - %s' % (low, high))
 
-        values = [v for (_, _, v) in region_mapping if v != None]
+        values = [v for (_, _, v) in region_mapping if v is not None]
         lowest = min(values)
         biggest = max(values)
         inc = (biggest - lowest) / levels
@@ -322,10 +322,10 @@ class AbstractMap:
         colormapping = {}
         colors = make_color_scale(levels)
         for (idprop, idvalue, value) in region_mapping:
-            ix = int(round((value - lowest) / inc)) if value != None else None
-            color = colors[ix] if ix != None else undefined_color
+            ix = int(round((value - lowest) / inc)) if value is not None else None
+            color = colors[ix] if ix is not None else undefined_color
 
-            if not color in colormapping:
+            if color not in colormapping:
                 colormapping[color] = []
             colormapping[color].append((idprop, idvalue))
 
