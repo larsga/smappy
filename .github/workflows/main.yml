@@ -1,0 +1,29 @@
+name: checks
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_call:
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        language:
+          - python
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: "Install ruff"
+        run: "pip install ruff"
+
+      - name: Ruff
+        run: "ruff check"
