@@ -257,10 +257,12 @@ class MapDecorator:
 class ShapeLayer:
 
     def __init__(self, geometry_file: str, line: Optional[LineFormat],
-                 fill_color: Optional[Color], selectors : Optional[list]):
+                 fill_color: Optional[Color], fill_opacity: Optional[float],
+                 selectors : Optional[list]):
         self._geometry_file = geometry_file
         self._line = line
         self._fill_color = fill_color
+        self._fill_opacity = fill_opacity
         self._selectors = selectors
 
     def get_geometry_file(self):
@@ -272,6 +274,9 @@ class ShapeLayer:
     def get_fill_color(self):
         return self._fill_color
 
+    def get_fill_opacity(self):
+        return self._fill_opacity
+
     def get_selectors(self):
         return self._selectors
 
@@ -281,15 +286,16 @@ class AbstractMap:
 
     def __init__(self):
         self._markers = []
-        self._symbols = [] # legend gets built from this
+        self._symbols = set() # legend gets built from this
         self._layers = []
 
     def add_marker(self, lat: float, lng: float, title: str,
                    marker: Marker):
         self._markers.append(PositionedMarker(lat, lng, title, marker))
+        self._symbols.add(marker)
 
     def get_marker_types(self):
-        return set([m.get_marker() for m in self._markers])
+        return self._symbols
 
     def get_markers(self):
         return self._markers

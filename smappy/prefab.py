@@ -1,6 +1,18 @@
 
 from smappy import mapbase, mapniklib
 
+class MapStyle:
+
+    def __init__(self):
+        self._border_fill_color = '#409050'
+        self._border_line_color = 'rgb(10%,10%,10%)'
+        self._border_line_width = 1.5
+
+        self._lake_fill_color = '#88CCFF'
+        self._glacier_fill_color = '#eeeeee'
+
+default_map_style = MapStyle()
+
 def _norway_montage(filename, legend_box):
     # hacky workaround for broken PIL
     import os
@@ -62,7 +74,7 @@ map_views = {
                            width = 2000, height = 1400),
     'west-europe' : MapView(east = -4, west = 28, south = 52.5, north = 63.5,
                             width = 2000, height = 1600),
-    'finland' : MapView(east = 23, west = 27, south = 59, north = 64),
+    'south-finland' : MapView(east = 23, west = 27, south = 59, north = 64),
     'baltic' : MapView(east = 24, west = 26, south = 53.5, north = 59.7,
                        width = 1600, height = 1200),
     'denmark' : MapView(east = 15.3, west = 7.8, south = 54.5, north = 57.9,
@@ -71,26 +83,31 @@ map_views = {
                         width = 1600, height = 1000),
     'georgia' : MapView(east = 41, west = 49, south = 40, north = 45,
                         width = 1600, height = 800),
-    'baltic' : MapView(east = 19, west = 31.2, south = 53.7, north = 59.9,
-                       width = 1200, height = 1200),
     'world' : MapView(east = -160, west = 160, south = -57, north = 84,
                       width = 3000, height = 2000),
     'germany' : MapView(east = 5, west = 24, south = 47, north = 56,
                       width = 2000, height = 1600),
+    'ukraine' : MapView(north = 52.6, west = 21.7,
+                        south = 44.4, east = 41.6,
+                        width = 2000, height = 1600),
+    'finland' : MapView(north = 70.24, west = 19.43,
+                        south = 59.44, east = 33,
+                        width = 1000, height = 2000),
 }
 
-def build_natural_earth(view, shapedir):
-    themap = mapniklib.MapnikMap(view)
+def build_natural_earth(view, shapedir, map_style = default_map_style):
+    themap = mapniklib.MapnikMap(view,
+                                 background_color = map_style._lake_fill_color)
 
     borders = shapedir + '/ne_10m_admin_0_countries/ne_10m_admin_0_countries.shp'
     themap.add_shapes(borders,
-                      line_color = 'rgb(10%,10%,10%)',
-                      line_width = 0.5,
-                      fill_color = '#409050')
+                      line_color = map_style._border_line_color,
+                      line_width = map_style._border_line_width,
+                      fill_color = map_style._border_fill_color)
 
     lakes = shapedir + 'ne_10m_lakes/ne_10m_lakes.shp'
     themap.add_shapes(lakes,
-                      fill_color = '#88CCFF')
+                      fill_color = map_style._lake_fill_color)
 
     chosen_rivers = [
         ('name', 'Volga'),
@@ -107,12 +124,12 @@ def build_natural_earth(view, shapedir):
 
     rivers = shapedir + 'ne_10m_rivers_lake_centerlines/ne_10m_rivers_lake_centerlines.shp'
     themap.add_shapes(rivers,
-                      line_color = '#88CCFF',
+                      line_color = map_style._lake_fill_color,
                       line_width = 0.8,
                       selectors = chosen_rivers)
 
     glaciers = shapedir + 'ne_10m_glaciated_areas/ne_10m_glaciated_areas.shp'
     themap.add_shapes(glaciers,
-                      fill_color = '#eeeeee')
+                      fill_color = map_style._glacier_fill_color)
 
     return themap

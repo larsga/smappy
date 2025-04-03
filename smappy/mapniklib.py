@@ -21,10 +21,12 @@ class MapnikMap(mapbase.AbstractMap):
                    line_width: Optional[float] = None,
                    line_dash: Optional[tuple] = None,
                    fill_color: Optional[str] = None,
+                   fill_opacity: Optional[float] = None,
                    selectors: Optional[list] = None):
         line = mapbase.to_line_format(line_color, line_width, line_dash)
         self._layers.append(mapbase.ShapeLayer(geometry_file, line,
                                                mapbase.to_color(fill_color),
+                                               fill_opacity,
                                                selectors))
 
     def add_text_label(self, text: str, lat: float, lng: float, style):
@@ -63,7 +65,7 @@ class MapnikMap(mapbase.AbstractMap):
             add_legend(filename, self._symbols, self._legend)
 
     def _get_default_scale(self) -> float:
-        size = min(self._view.height, self._view.width)
+        size = max(self._view.height, self._view.width)
         factor = 0.005
         return size * factor
 
@@ -95,6 +97,7 @@ def render_layer(m, ctx, layer):
         if layer.get_fill_color():
             polygon_symbolizer = pymapnik3.PolygonSymbolizer()
             polygon_symbolizer.set_fill(mapnik_color(layer.get_fill_color()))
+            polygon_symbolizer.set_fill_opacity(layer.get_fill_opacity() or 1.0)
             r.add_symbolizer(polygon_symbolizer)
             s.add_rule(r)
 
@@ -236,8 +239,10 @@ def zoom_to_box(themap, view):
     themap.zoom_to_box(project(themap.get_srs(), view.west, view.south,
                                view.east, view.north))
 
-def add_legend(filename, used_symbols, legend):
+def add_legend(filename, symbols, legend):
     from PIL import Image, ImageDraw, ImageFont
+
+    used_symbols = list(symbols)
 
     legend_scale = legend.get_scale()
     im = Image.open(filename)

@@ -7,4 +7,3 @@ Todo:
 
   * Support legend for non-choropleth maps.
   * Support drawing legend onto PDF and SVG maps.
-  * Auto-scale markers on mapnik maps.
