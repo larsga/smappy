@@ -106,6 +106,8 @@ class TextStyle:
     def get_halo_radius(self):
         return self._halo_radius
 
+DEFAULT_TEXT_STYLE = TextStyle()
+
 # ===== LINE FORMAT
 
 def to_line_format(line_color: Optional[str], line_width: Optional[float],
@@ -134,15 +136,22 @@ class LineFormat:
 
 # ===== MARKER
 
+class TitleDisplay(Enum):
+    NO_DISPLAY     = 1
+    INSIDE_SYMBOL  = 2
+    NEXT_TO_SYMBOL = 3
+
 class Marker:
 
-    def __init__(self, fill_color, label = None, scale:float = None,
-                 show_title = False, text_style = None):
+    def __init__(self, fill_color, label:str = None, scale:float = None,
+                 text_style: TextStyle = DEFAULT_TEXT_STYLE,
+                 title_display: TitleDisplay = TitleDisplay.NO_DISPLAY):
+        '''label: name for the class of things represented by the marker'''
         self._fill_color = to_color(fill_color)
         self._label = label
         self._scale = scale
-        self._show_title = show_title # show title on the positioned marker
         self._text_style = text_style
+        self._title_display = title_display
 
     def get_id(self):
         return 'marker%s' % id(self)
@@ -155,9 +164,6 @@ class Marker:
 
     def get_shape(self):
         return Shape.CIRCLE
-
-    def get_show_title(self):
-        return self._show_title
 
     def get_text_style(self):
         return self._text_style
@@ -177,9 +183,12 @@ class Marker:
     def set_scale(self, scale: float):
         self._scale = scale
 
+    def get_title_display(self) -> TitleDisplay:
+        return self._title_display
+
 class PositionedMarker:
 
-    def __init__(self, lat: float, lng: float, title, marker):
+    def __init__(self, lat: float, lng: float, title: str, marker: Marker):
         self._lat = float(lat)
         self._lng = float(lng)
         self._title = title
@@ -205,6 +214,13 @@ class PositionedMarker:
 
     def get_data(self):
         return {} # not sure what this is
+
+    def get_text_inside_symbol(self) -> str|None:
+        'This is the text we display inside the circle/triangle/...'
+        if self._marker._title_display == TitleDisplay.INSIDE_SYMBOL:
+            return self._title
+        else:
+            return None
 
 # ===== LEGEND
 
@@ -288,6 +304,15 @@ class AbstractMap:
         self._markers = []
         self._symbols = set() # legend gets built from this
         self._layers = []
+        self._legend = None
+
+    def set_legend(self, legend):
+        if legend is True:
+            legend = Legend()
+        self._legend = legend
+
+    def get_symbols(self):
+        return self._symbols
 
     def add_marker(self, lat: float, lng: float, title: str,
                    marker: Marker):
@@ -330,8 +355,9 @@ class AbstractMap:
             colormapping[color].append((idprop, idvalue))
 
         for (color, selectors) in colormapping.items():
+            fill_opacity = 1.0
             self._layers.append(ShapeLayer(
-                geometry_file, line, color, selectors
+                geometry_file, line, color, fill_opacity, selectors
             ))
 
         for (ix, color) in enumerate(colors):

@@ -12,7 +12,6 @@ class MapnikMap(mapbase.AbstractMap):
         mapbase.AbstractMap.__init__(self)
         self._view = mapview
         self._background = mapbase.to_color(background_color or '#88CCFF')
-        self._legend = None
         self._labels = []
 
     def add_shapes(self,
@@ -31,11 +30,6 @@ class MapnikMap(mapbase.AbstractMap):
 
     def add_text_label(self, text: str, lat: float, lng: float, style):
         self._labels.append((text, lat, lng, style))
-
-    def set_legend(self, legend):
-        if legend is True:
-            legend = mapbase.Legend()
-        self._legend = legend
 
     def render_to(self, filename: str, format: str = 'png'):
         filename = mapbase.add_extension(filename, format)
@@ -62,7 +56,7 @@ class MapnikMap(mapbase.AbstractMap):
         pymapnik3.render_to_file(m, filename, format)
 
         if self._legend:
-            add_legend(filename, self._symbols, self._legend)
+            add_legend(filename, self.get_symbols(), self._legend)
 
     def _get_default_scale(self) -> float:
         size = max(self._view.height, self._view.width)
@@ -134,11 +128,16 @@ def render_markers(m, ctx, marker_types, markers):
         svgfile = '/tmp/%s.svg' % marker.get_id()
         generate_marker_svg(marker, svgfile)
 
-        if not marker.get_show_title():
+        if True:
+        # don't display title -- doesn't work with current API, because we
+        #   need to know this on the markertype
+        # marker.get_title_display() == mapbase.TitleDisplay.NO_DISPLAY:
+            # display just the marker
             sym = pymapnik3.PointSymbolizer()
             sym.set_allow_overlap(True)
             sym.set_ignore_placement(True)
         else:
+            # display label next to marker
             style = marker.get_text_style()
             sym = pymapnik3.ShieldSymbolizer()
             sym.set_fill(mapnik_color(style.get_font_color()))

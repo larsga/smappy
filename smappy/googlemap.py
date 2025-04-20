@@ -30,9 +30,6 @@ class GoogleMap(mapbase.AbstractMap):
     def get_api_key(self):
         return self._apikey
 
-    def set_legend(self, legend):
-        pass
-
     def render_to(self, filename:str , width: str = '100%',
                   height: str = '100%', format: str = 'html'):
         if format != 'html':
@@ -156,7 +153,8 @@ function add_marker(theid, lat, lng, title, symbol, label, textcolor, data) {
                     marker.get_longitude(),
                     _to_jstr(marker.get_title()),
                     marker.get_marker().get_id(),
-                    _to_jstr(None), # displayed text label
+                    # displayed text label:
+                    _to_jstr(marker.get_text_inside_symbol()),
                     #_to_jstr(marker.get_marker().get_title()),
                     _to_jstr(marker.get_marker().get_text_color().as_hex()),
                     json.dumps(marker.get_data())))
@@ -168,23 +166,23 @@ function add_marker(theid, lat, lng, title, symbol, label, textcolor, data) {
 
     outf.write(u'</script>\n\n\n')
 
-    # if themap.has_legend():
-    #     outf.write('<div id="legend">\n')
-    #     for symbol in themap.get_symbols():
-    #         outf.write('''
-    #           <svg height="19" width="16">
-    #             <circle cx="8" cy="13" r="5" stroke="black" stroke-width="1"
-    #                     fill="%s" />
-    #           </svg> %s<br>
-    #         ''' % (symbol.get_color(), symbol.get_title()))
-    #     outf.write('</div>\n')
+    if themap._legend:
+        outf.write('<div id="legend">\n')
+        for symbol in themap.get_symbols():
+            outf.write('''
+              <svg height="19" width="16">
+                <circle cx="8" cy="13" r="5" stroke="black" stroke-width="1"
+                        fill="%s" />
+              </svg> %s<br>
+            ''' % (symbol.get_fill_color().as_hex(), symbol.get_label()))
+        outf.write('</div>\n')
 
-    #     outf.write('''
-    #       <script>
-    #         var legend = document.getElementById('legend');
-    #         map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(legend);
-    #       </script>
-    #     ''')
+        outf.write('''
+          <script>
+            var legend = document.getElementById('legend');
+            map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(legend);
+          </script>
+        ''')
 
     for marker in themap.get_markers():
         desc = marker.get_description() or ''
