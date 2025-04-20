@@ -27,3 +27,6 @@ jobs:
 
       - name: Ruff
         run: "ruff check"
+
+      - name: unittest
+        run: "python -m unittest discover"
