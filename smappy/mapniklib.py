@@ -12,26 +12,8 @@ class MapnikMap(mapbase.AbstractMap):
         mapbase.AbstractMap.__init__(self)
         self._view = mapview
         self._background = mapbase.to_color(background_color or '#88CCFF')
-        self._labels = []
 
-    def add_shapes(self,
-                   geometry_file: str,
-                   line_color: Optional[str] = None,
-                   line_width: Optional[float] = None,
-                   line_dash: Optional[tuple] = None,
-                   fill_color: Optional[str] = None,
-                   fill_opacity: Optional[float] = None,
-                   selectors: Optional[list] = None):
-        line = mapbase.to_line_format(line_color, line_width, line_dash)
-        self._layers.append(mapbase.ShapeLayer(geometry_file, line,
-                                               mapbase.to_color(fill_color),
-                                               fill_opacity,
-                                               selectors))
-
-    def add_text_label(self, text: str, lat: float, lng: float, style):
-        self._labels.append((text, lat, lng, style))
-
-    def render_to(self, filename: str, format: str = 'png'):
+    def render_to(self, filename: str, format: str = 'png') -> None:
         filename = mapbase.add_extension(filename, format)
 
         m = pymapnik3.Map(self._view.width, self._view.height)
@@ -56,7 +38,10 @@ class MapnikMap(mapbase.AbstractMap):
         pymapnik3.render_to_file(m, filename, format)
 
         if self._legend:
-            add_legend(filename, self.get_symbols(), self._legend)
+            legend_box = add_legend(filename, self.get_symbols(), self._legend)
+
+        if self._view.transform:
+            self._view.transform(filename, legend_box)
 
     def _get_default_scale(self) -> float:
         size = max(self._view.height, self._view.width)
@@ -128,10 +113,7 @@ def render_markers(m, ctx, marker_types, markers):
         svgfile = '/tmp/%s.svg' % marker.get_id()
         generate_marker_svg(marker, svgfile)
 
-        if True:
-        # don't display title -- doesn't work with current API, because we
-        #   need to know this on the markertype
-        # marker.get_title_display() == mapbase.TitleDisplay.NO_DISPLAY:
+        if marker.get_title_display() == mapbase.TitleDisplay.NO_DISPLAY:
             # display just the marker
             sym = pymapnik3.PointSymbolizer()
             sym.set_allow_overlap(True)

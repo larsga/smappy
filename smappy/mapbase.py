@@ -143,7 +143,8 @@ class TitleDisplay(Enum):
 
 class Marker:
 
-    def __init__(self, fill_color, label:str = None, scale:float = None,
+    def __init__(self, fill_color: Color,
+                 label:str = None, scale:float = None,
                  text_style: TextStyle = DEFAULT_TEXT_STYLE,
                  title_display: TitleDisplay = TitleDisplay.NO_DISPLAY):
         '''label: name for the class of things represented by the marker'''
@@ -236,38 +237,6 @@ class Legend:
     def get_scale(self):
         return self._scale
 
-# ===== MAP DECORATOR
-
-class MapDecorator:
-    def __init__(self):
-        self._labels = []
-        self._legend = None
-        self._shapes = []
-
-    def get_text_styles(self):
-        return set([style for (_, _, _, style) in self._labels])
-
-    def get_text_labels(self):
-        return self._labels
-
-    def add_text_label(self, text, lat, lng, style):
-        self._labels.append((text, lat, lng, style))
-
-    def get_legend(self):
-        return self._legend
-
-    def set_legend(self, legend):
-        if legend is True:
-            legend = Legend()
-        self._legend = legend
-
-    # FIXME: add support for fill
-    def add_shapes(self, geometry_file: str, line: LineFormat):
-        self._shapes.append((geometry_file, line))
-
-    def get_shapes(self):
-        return self._shapes
-
 # ===== LAYERS
 
 class ShapeLayer:
@@ -305,6 +274,24 @@ class AbstractMap:
         self._symbols = set() # legend gets built from this
         self._layers = []
         self._legend = None
+        self._labels = []
+
+    def add_shapes(self,
+                   geometry_file: str,
+                   line_color: Optional[str] = None,
+                   line_width: Optional[float] = None,
+                   line_dash: Optional[tuple] = None,
+                   fill_color: Optional[str] = None,
+                   fill_opacity: Optional[float] = None,
+                   selectors: Optional[list] = None) -> None:
+        line = to_line_format(line_color, line_width, line_dash)
+        self._layers.append(ShapeLayer(geometry_file, line,
+                                       to_color(fill_color),
+                                       fill_opacity,
+                                       selectors))
+
+    def add_text_label(self, lat: float, lng: float, text: str, style) -> None:
+        self._labels.append((text, lat, lng, style))
 
     def set_legend(self, legend):
         if legend is True:
@@ -315,7 +302,7 @@ class AbstractMap:
         return self._symbols
 
     def add_marker(self, lat: float, lng: float, title: str,
-                   marker: Marker):
+                   marker: Marker, descr : str|None = None):
         self._markers.append(PositionedMarker(lat, lng, title, marker))
         self._symbols.add(marker)
 
