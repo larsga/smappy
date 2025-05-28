@@ -7,7 +7,7 @@ class MapStyle:
     def __init__(self):
         self._border_fill_color = '#409050'
         self._border_line_color = 'rgb(10%,10%,10%)'
-        self._border_line_width = 3
+        self._border_line_width = 1
 
         self._lake_fill_color = '#88CCFF'
         self._lake_line_color = None
@@ -132,7 +132,7 @@ def _sweden_montage(filename, legend_box):
 
 MapView = mapbase.MapView
 map_views = {
-    'nordic' : MapView(east = 4, west = 30, south = 54.5, north = 65,
+    'nordic' : MapView(east = 30, west = 4, south = 54.5, north = 65,
                        width = 1800, height = 1400),
     'norway' : MapView(east = 14.8, west = 3.5, south = 57.9, north = 63.9,
                        width = 1200, height = 1250),

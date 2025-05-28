@@ -144,7 +144,8 @@ class TitleDisplay(Enum):
 class Marker:
 
     def __init__(self, fill_color: Color,
-                 label:str = None, scale:float = None,
+                 label:str = None,
+                 scale:float = None,
                  text_style: TextStyle = DEFAULT_TEXT_STYLE,
                  title_display: TitleDisplay = TitleDisplay.NO_DISPLAY):
         '''label: name for the class of things represented by the marker'''
