@@ -244,7 +244,7 @@ class ShapeLayer:
 
     def __init__(self, geometry_file: str, line: Optional[LineFormat],
                  fill_color: Optional[Color], fill_opacity: Optional[float],
-                 selectors : Optional[list]):
+                 selectors: list = []):
         self._geometry_file = geometry_file
         self._line = line
         self._fill_color = fill_color
@@ -352,8 +352,7 @@ class AbstractMap:
             low = lowest + (ix * inc)
             high = lowest + ((ix+1) * inc)
             label = label_formatter(low, high)
-            self._symbols.append(Marker(fill_color = colors[ix],
-                                        label = label))
+            self._symbols.add(Marker(fill_color = colors[ix], label = label))
 
 # ===== CHOROPLETH HELPERS
 

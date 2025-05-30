@@ -38,7 +38,8 @@ class NativeMap(mapbase.AbstractMap):
         projector = make_projector(self._view, width, height)
 
         for layer in self._layers:
-            features = extract_features(layer.get_geometry_file())
+            features = extract_features(layer.get_geometry_file(),
+                                        layer.get_selectors())
             for feature in features:
                 linestrings = convert_to_linestrings(feature)
                 for linestring in linestrings:
@@ -237,14 +238,14 @@ def project(lnglat):
 
 # --- FORMAT HANDLING
 
-def extract_features(filename):
+def extract_features(filename, selectors):
     if filename.endswith('.shp'):
-        return extract_features_shp(filename)
+        return extract_features_shp(filename, selectors)
     elif filename.endswith('.json') or filename.endswith('.geojson'):
-        return extract_features_geojson(filename)
+        return extract_features_geojson(filename, selectors)
     assert False
 
-def extract_features_shp(filename):
+def extract_features_shp(filename, selectors):
     reader = shapefile.Reader(filename)
 
     geojson_data = reader.__geo_interface__
@@ -253,8 +254,28 @@ def extract_features_shp(filename):
 
     return geojson_data['features']
 
-def extract_features_geojson(filename):
-    return json.load(open(filename))
+def extract_features_geojson(filename, selectors):
+    features = json.load(open(filename))['features']
+    if selectors:
+        by_prop = {}
+        for (idprop, idval) in selectors:
+            if idprop not in by_prop:
+                by_prop[idprop] = set()
+            by_prop[idprop].add(idval)
+
+        accepted = []
+        for f in features:
+            props = f['properties']
+            ok = False
+            for (propname, values) in by_prop.items():
+                if props.get(propname) in values:
+                    ok = True
+                    break
+            if ok:
+                accepted.append(f)
+        features = accepted
+    return features
+
 
 def convert_to_linestrings(feature):
     if not feature['geometry']:
