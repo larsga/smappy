@@ -118,8 +118,6 @@ class NativeMap(mapbase.AbstractMap):
             x1 = width - (offset + boxwidth)
             x2 = width - offset
 
-        box = [(x1, y1), (x2, y2)]
-
         lf = mapbase.to_line_format('#000000', int(2 * legend_scale))
         drawer.polygon(
             [(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)],
