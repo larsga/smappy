@@ -228,7 +228,7 @@ class PositionedMarker:
 
 class Legend:
 
-    def __init__(self, location = ('top', 'right'), scale = 1.0):
+    def __init__(self, location = ('top', 'right'), scale = 1.5):
         self._location = location
         self._scale = scale
 

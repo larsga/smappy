@@ -71,7 +71,91 @@ class NativeMap(mapbase.AbstractMap):
             pt = projector((lng, lat))
             drawer.text(pt, text, style)
 
+        if self._legend:
+            self._add_legend(drawer)
+
         drawer.write_to(filename)
+
+    def _add_legend(self, drawer):
+        used_symbols = list(self._symbols)
+        legend_scale = self._legend.get_scale() * RESIZE_FACTOR
+
+        style = mapbase.TextStyle(font_name = 'Arial',
+                                  font_size = 24 * self._legend.get_scale(),
+                                  font_color = '#000000')
+
+        widest = 0
+        for symbol in used_symbols:
+            (left, top, right, bottom) = drawer.get_bbox(symbol.get_label(),
+                                                         style)
+            width = right - left
+            widest = max(widest, width)
+
+        r = 12 * legend_scale
+        offset = legend_scale * 8
+        boxwidth = r * 2 + offset * 3 + widest
+        displace = (r * 2) + 12 * legend_scale
+        boxheight = displace * len(used_symbols) + offset
+
+        (vertpos, horpos) = self._legend.get_location()
+        assert vertpos in ('top', 'bottom')
+        assert horpos in ('left', 'right')
+
+        if vertpos == 'top':
+            y1 = offset
+            y2 = offset + boxheight
+        else:
+            (width, height) = drawer.get_size()
+            y1 = height - (boxheight + offset)
+            y2 = height - offset
+
+        if horpos == 'left':
+            x1 = offset
+            x2 = offset + boxwidth
+        else:
+            (width, height) = drawer.get_size()
+            x1 = width - (offset + boxwidth)
+            x2 = width - offset
+
+        box = [(x1, y1), (x2, y2)]
+
+        lf = mapbase.to_line_format('#000000', int(2 * legend_scale))
+        drawer.polygon(
+            [(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)],
+            lf,
+            mapbase.to_color('#ffffff')
+        )
+
+        for (ix, symbol) in enumerate(used_symbols):
+            displacement = displace * ix
+            if symbol.get_shape() == mapbase.Shape.CIRCLE:
+                drawer.circle(
+                    (x1 + offset + r, y1 + offset + displacement + r),
+                    r / RESIZE_FACTOR, # it's already in there once
+                    symbol.get_fill_color(),
+                    symbol
+                )
+
+            elif symbol.get_shape() == mapbase.Shape.TRIANGLE:
+                assert False
+                # draw.polygon(
+                #     [
+                #         (x1 + offset + r, y1 + offset + displacement),
+                #         (x1 + offset, y1 + offset + r*2 + displacement),
+                #         (x1 + offset + r*2, y1 + offset + r*2 + displacement)
+                #     ],
+                #     outline = (0, 0, 0),
+                #     fill = symbol.get_fill_color().as_int_tuple(256)
+                # )
+
+            else:
+                assert False, 'Unsupported shape: %s' % symbol.get_shape()
+
+            drawer.text(
+                (x1 + 20 * legend_scale + (r * 2), y1 + offset + displacement),
+                symbol.get_label(),
+                style
+            )
 
 class OverlapIndex:
 
@@ -213,6 +297,7 @@ class PngDrawer:
         self._draw.polygon(coords, outline = lc, width = lw, fill = fc)
 
     def circle(self, point, radius, fill, line_format):
+        'point is center coordinates'
         width = line_format.get_line_width() * RESIZE_FACTOR
         line_color = line_format.get_line_color().as_int_tuple(255)
         self._draw.circle(point, radius * RESIZE_FACTOR,
@@ -224,7 +309,7 @@ class PngDrawer:
         font = ImageFont.truetype(style.get_font_name(),
                                   style.get_font_size() * RESIZE_FACTOR,
                                   encoding = 'unic')
-        return font.getbbox(marker.get_title())
+        return font.getbbox(text)
 
     def text(self, point, text, style):
         font = ImageFont.truetype(style.get_font_name(),
@@ -241,6 +326,8 @@ class PngDrawer:
             img = self._img.resize((int(self._img.width / RESIZE_FACTOR),
                                     int(self._img.height / RESIZE_FACTOR)),
                                    resample = Image.Resampling.LANCZOS)
+        else:
+            img = self._img
 
         img.save(filename, 'PNG')
 
