@@ -6,6 +6,7 @@ import json, math
 from typing import Optional
 from smappy import mapbase
 from PIL import Image, ImageDraw, ImageFont
+import fpdf
 import shapefile
 
 RESIZE_FACTOR = 4 # to get antialiasing
@@ -20,18 +21,21 @@ class NativeMap(mapbase.AbstractMap):
 
     def render_to(self, filename: str, format: str = 'png') -> None:
         filename = mapbase.add_extension(filename, format)
-        assert format == 'png'
+        assert format in ('png', 'pdf')
 
         bboxer = OverlapIndex()
-        projector = make_projector(self._view,
-                                   self._view.width * RESIZE_FACTOR,
-                                   self._view.height * RESIZE_FACTOR)
 
         # --- draw the map
-        img = Image.new('RGB', (self._view.width * RESIZE_FACTOR,
-                                self._view.height * RESIZE_FACTOR),
-                        self._background.as_int_tuple(255))
-        draw = ImageDraw.Draw(img)
+        if format == 'png':
+            drawer = PngDrawer(self._view.width,
+                               self._view.height,
+                               self._background)
+        else:
+            drawer = PdfDrawer(self._view.width,
+                               self._view.height,
+                               self._background)
+        (width, height) = drawer.get_size()
+        projector = make_projector(self._view, width, height)
 
         for layer in self._layers:
             features = extract_features(layer.get_geometry_file())
@@ -40,16 +44,8 @@ class NativeMap(mapbase.AbstractMap):
                 for linestring in linestrings:
                     coords = [projector(coord) for coord in linestring]
 
-                    lw = 0
-                    lc = (0, 0, 0)
-                    fc = None
-                    if layer.get_line_format():
-                        line = layer.get_line_format()
-                        lw = int(line.get_line_width())
-                        lc = line.get_line_color().as_int_tuple(255)
-                    if layer.get_fill_color():
-                        fc = layer.get_fill_color().as_int_tuple(255)
-                    draw.polygon(coords, outline = lc, width = lw, fill = fc)
+                    drawer.polygon(coords, layer.get_line_format(),
+                                   layer.get_fill_color())
 
         for marker in self._markers:
             mf = marker.get_marker()
@@ -57,46 +53,25 @@ class NativeMap(mapbase.AbstractMap):
             pt = (marker.get_longitude(), marker.get_latitude())
             pt = projector(pt)
 
-            draw.circle(pt, (mf.get_scale() or 10) * RESIZE_FACTOR,
-                        fill = mf.get_fill_color().as_int_tuple(255),
-                        width = mf.get_line_width() * RESIZE_FACTOR,
-                        outline = mf.get_line_color().as_int_tuple(255))
+            drawer.circle(pt, mf.get_scale() or 10, mf.get_fill_color(),
+                          line_format = mf)
 
             if not mf.get_title_display() == mapbase.TitleDisplay.NEXT_TO_SYMBOL:
                 continue
 
-            style = mf.get_text_style()
-            font = ImageFont.truetype(style.get_font_name(),
-                                      style.get_font_size() * RESIZE_FACTOR,
-                                      encoding = 'unic')
-            radius = ((mf.get_scale() or 10) + 2) * RESIZE_FACTOR
+            radius = ((mf.get_scale() or 10) + 2)
+            bbox = drawer.get_bbox(marker.get_title(), mf.get_text_style())
             pos = bboxer.find_text_position(pt,
                                             marker.get_title(),
-                                            font.getbbox(marker.get_title()),
+                                            bbox,
                                             radius)
-            draw.text(pos, marker.get_title(),
-                      font = font,
-                      fill = style.get_font_color().as_int_tuple(255),
-                      stroke_width = style.get_halo_radius() * RESIZE_FACTOR,
-                      stroke_fill = style.get_halo_color().as_int_tuple(255))
+            drawer.text(pos, marker.get_title(), mf.get_text_style())
 
         for (text, lat, lng, style) in self._labels:
-            font = ImageFont.truetype(style.get_font_name(),
-                                      style.get_font_size() * RESIZE_FACTOR,
-                                      encoding = 'unic')
             pt = projector((lng, lat))
-            draw.text(pt, text, font = font,
-                      fill = style.get_font_color().as_int_tuple(255),
-                      stroke_width = style.get_halo_radius(),
-                      stroke_fill = style.get_halo_color())
+            drawer.text(pt, text, style)
 
-        # resize to smooth image
-        if RESIZE_FACTOR != 1:
-            img = img.resize((int(img.width / RESIZE_FACTOR),
-                              int(img.height / RESIZE_FACTOR)),
-                             resample = Image.Resampling.LANCZOS)
-
-        img.save(filename, 'PNG')
+        drawer.write_to(filename)
 
 class OverlapIndex:
 
@@ -212,3 +187,142 @@ def convert_to_linestrings(feature):
 
     else:
         return [] #assert False
+
+# --- PNG DRAWER
+
+class PngDrawer:
+
+    def __init__(self, width, height, background):
+        self._img = Image.new('RGB', (width * RESIZE_FACTOR,
+                                      height * RESIZE_FACTOR),
+                              background.as_int_tuple(255))
+        self._draw = ImageDraw.Draw(self._img)
+
+    def get_size(self):
+        return (self._img.width, self._img.height)
+
+    def polygon(self, coords, line_format, fill_color):
+        lw = 0
+        lc = (0, 0, 0)
+        fc = None
+        if line_format:
+            lw = int(line_format.get_line_width()) #* RESIZE_FACTOR
+            lc = line_format.get_line_color().as_int_tuple(255)
+        if fill_color:
+            fc = fill_color.as_int_tuple(255)
+        self._draw.polygon(coords, outline = lc, width = lw, fill = fc)
+
+    def circle(self, point, radius, fill, line_format):
+        width = line_format.get_line_width() * RESIZE_FACTOR
+        line_color = line_format.get_line_color().as_int_tuple(255)
+        self._draw.circle(point, radius * RESIZE_FACTOR,
+                          fill = fill.as_int_tuple(255),
+                          width = width,
+                          outline = line_color)
+
+    def get_bbox(self, text, style):
+        font = ImageFont.truetype(style.get_font_name(),
+                                  style.get_font_size() * RESIZE_FACTOR,
+                                  encoding = 'unic')
+        return font.getbbox(marker.get_title())
+
+    def text(self, point, text, style):
+        font = ImageFont.truetype(style.get_font_name(),
+                                  style.get_font_size() * RESIZE_FACTOR,
+                                  encoding = 'unic')
+        self._draw.text(point, text,
+                        font = font,
+                        fill = style.get_font_color().as_int_tuple(255),
+                        stroke_width = style.get_halo_radius() * RESIZE_FACTOR,
+                        stroke_fill = style.get_halo_color().as_int_tuple(255))
+
+    def write_to(self, filename):
+        if RESIZE_FACTOR != 1:
+            img = self._img.resize((int(self._img.width / RESIZE_FACTOR),
+                                    int(self._img.height / RESIZE_FACTOR)),
+                                   resample = Image.Resampling.LANCZOS)
+
+        img.save(filename, 'PNG')
+
+class PdfDrawer:
+
+    def __init__(self, width, height, background):
+        self._size = (width, height)
+        self._pdf = fpdf.FPDF()
+        self._pdf.add_page(format = self._size)
+
+        (r, g, b) = background.as_int_tuple(255)
+        self._pdf.set_fill_color(r = r, g = g, b = b)
+        self._pdf.rect(h = self._pdf.h, w = self._pdf.w, x = 0, y = 0,
+                       style = 'DF')
+
+        self._installed_fonts = set()
+
+    def get_size(self):
+        return self._size
+
+    def polygon(self, coords, line_format, fill_color):
+        style = self._set_line_and_fill(line_format, fill_color)
+        self._pdf.polygon(coords, style = style)
+
+    def _set_line_and_fill(self, line_format, fill_color):
+        'Returns drawing style'
+        if fill_color:
+            (r, g, b) = fill_color.as_int_tuple(255)
+            self._pdf.set_fill_color(r, g, b)
+
+        if line_format:
+            self._pdf.set_line_width(line_format.get_line_width())
+            (r, g, b) = line_format.get_line_color().as_int_tuple(255)
+            self._pdf.set_draw_color(r, g, b)
+        else:
+            self._pdf.set_line_width(0)
+            (r, g, b) = fill_color.as_int_tuple(255)
+            self._pdf.set_draw_color(r, g, b)
+
+        if fill_color:
+            return 'DF'
+        else:
+            return 'D'
+
+    def circle(self, point, radius, fill, line_format):
+        style = self._set_line_and_fill(line_format, fill)
+        self._pdf.circle(point[0], point[1], radius, style = style)
+
+    def get_bbox(self, text, style):
+        self._install_font(style)
+        return (0, 0, 1, 1)
+
+    def _install_font(self, style):
+        font = style.get_font_name()
+        if font not in self._installed_fonts:
+            self._pdf.add_font(family = extract_font_name(font), fname = font)
+            self._installed_fonts.add(font)
+
+    def text(self, point, text, style):
+        self._install_font(style)
+        self._pdf.set_font(extract_font_name(style.get_font_name()))
+
+        # this doesn't work -- need thicker version of the text, basically
+        if False and style.get_halo_color():
+            self._pdf.set_font_size((style.get_font_size() + style.get_halo_radius()) * 2)
+            (r, g, b) = style.get_halo_color().as_int_tuple(255)
+            #self._pdf.set_text_color(r, g, b)
+            self._pdf.set_text_color(255, 0, 0)
+            height = self._pdf.get_string_width('x') * 2.2
+            self._pdf.text(point[0], point[1] + height, text)
+
+        (r, g, b) = style.get_font_color().as_int_tuple(255)
+        self._pdf.set_text_color(r, g, b)
+        self._pdf.set_font_size(style.get_font_size() * 2)
+        # Pillow has the text anchor top left, but fpdf has bottom left
+        height = self._pdf.get_string_width('x') * 2.2
+        self._pdf.text(point[0], point[1] + height, text)
+
+    def write_to(self, filename):
+        self._pdf.output(filename)
+
+def extract_font_name(filename):
+    ix = filename.rfind('/')
+    ix2 = filename.rfind('.')
+    return filename[ix+1 : ix2]
