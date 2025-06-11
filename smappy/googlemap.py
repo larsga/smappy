@@ -32,6 +32,7 @@ class GoogleMap(mapbase.AbstractMap):
 
     def render_to(self, filename:str , width: str = '100%',
                   height: str = '100%', format: str = 'html'):
+        format = format or 'html'
         if format != 'html':
             raise mapbase.SmappyException('Incorrect format "%s"' % format)
 

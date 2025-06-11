@@ -20,6 +20,7 @@ class NativeMap(mapbase.AbstractMap):
         self._background = mapbase.to_color(background_color or '#88CCFF')
 
     def render_to(self, filename: str, format: str = 'png') -> None:
+        format = format or 'png'
         filename = mapbase.add_extension(filename, format)
         assert format in ('png', 'pdf')
 

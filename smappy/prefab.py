@@ -29,9 +29,6 @@ class MapStyle:
     def get_neutral_color(self):
         return '#999999'
 
-    def get_green_color(self):
-        return '#00FF00'
-
     def get_cyan_color(self):
         return '#00FFFF'
 
@@ -40,6 +37,15 @@ class MapStyle:
 
     def get_blue_color(self):
         return '#4444FF'
+
+    def get_yellow_color(self):
+        return '#FFFF00'
+
+    def get_green_color(self):
+        return '#00FF00'
+
+    def get_red_color(self):
+        return '#FF0000'
 
 def load_map_style(filename : str) -> MapStyle:
     data = tomllib.load(open(filename, 'rb'))
@@ -152,7 +158,7 @@ map_views = {
                                width = 1400, height = 1200),
     'west-nordic' : MapView(east = -4, west = 25, south = 52.5, north = 63.5,
                             width = 1800, height = 1400),
-    'europe-all-big' : MapView(east = 50, west = -15, south = 34, north = 71,
+    'europe-all-big' : MapView(east = 57, west = -8, south = 34, north = 71,
                                width = 2000, height = 1600),
     'norway-sweden' : MapView(east = 6, west = 18, south = 57.9, north = 63.9,
                               width = 1800, height = 1200),
