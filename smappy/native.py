@@ -42,12 +42,15 @@ class NativeMap(mapbase.AbstractMap):
             features = extract_features(layer.get_geometry_file(),
                                         layer.get_selectors())
             for feature in features:
-                linestrings = convert_to_linestrings(feature)
+                (linestrings, closed) = convert_to_linestrings(feature)
                 for linestring in linestrings:
                     coords = [projector(coord) for coord in linestring]
 
-                    drawer.polygon(coords, layer.get_line_format(),
-                                   layer.get_fill_color())
+                    if closed:
+                        drawer.polygon(coords, layer.get_line_format(),
+                                       layer.get_fill_color())
+                    else:
+                        drawer.line(coords, layer.get_line_format())
 
         for marker in self._markers:
             mf = marker.get_marker()
@@ -251,10 +254,12 @@ def extract_features_shp(filename, selectors):
 
     reader.close()
 
-    return geojson_data['features']
+    return filter_features(selectors, geojson_data['features'])
 
 def extract_features_geojson(filename, selectors):
-    features = json.load(open(filename))['features']
+    return filter_features(selectors, json.load(open(filename))['features'])
+
+def filter_features(selectors, features):
     if selectors:
         by_prop = {}
         for (idprop, idval) in selectors:
@@ -275,22 +280,30 @@ def extract_features_geojson(filename, selectors):
         features = accepted
     return features
 
-
 def convert_to_linestrings(feature):
     if not feature['geometry']:
-        return [] # why does pyshp return this?
+        return ([], False) # why does pyshp return this?
 
     if feature['geometry']['type'] == 'Polygon':
-        return feature['geometry']['coordinates']
+        return (feature['geometry']['coordinates'], True)
 
     elif feature['geometry']['type'] == 'MultiPolygon':
         linestrings = []
         for part in feature['geometry']['coordinates']:
             linestrings += part
-        return linestrings
+        return (linestrings, True)
+
+    elif feature['geometry']['type'] == 'LineString':
+        return ([feature['geometry']['coordinates']], False)
+
+    elif feature['geometry']['type'] == 'MultiLineString':
+        linestrings = []
+        for part in feature['geometry']['coordinates']:
+            linestrings += [part]
+        return (linestrings, False)
 
     else:
-        return [] #assert False
+        return [[], False] #assert False
 
 # --- PNG DRAWER
 
@@ -310,7 +323,7 @@ class PngDrawer:
         lc = (0, 0, 0)
         fc = None
         if line_format:
-            lw = int(line_format.get_line_width()) #* RESIZE_FACTOR
+            lw = int(line_format.get_line_width()) * RESIZE_FACTOR
             lc = line_format.get_line_color().as_int_tuple(255)
         if fill_color:
             fc = fill_color.as_int_tuple(255)
@@ -324,6 +337,15 @@ class PngDrawer:
         if fill_ink:
             self._draw.draw.draw_polygon(coords, fill_ink, 1)
         self._draw.draw.draw_polygon(coords, ink, 0, lw)
+
+    def line(self, coords, line_format):
+        lw = 0
+        lc = (0, 0, 0)
+        if line_format:
+            lw = int(line_format.get_line_width()) * RESIZE_FACTOR
+            lc = line_format.get_line_color().as_int_tuple(255)
+
+        self._draw.line(coords, fill = lc, width = lw)
 
     def circle(self, point, radius, fill, line_format):
         'point is center coordinates'

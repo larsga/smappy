@@ -7,14 +7,14 @@ class MapStyle:
     def __init__(self):
         self._border_fill_color = '#409050'
         self._border_line_color = 'rgb(10%,10%,10%)'
-        self._border_line_width = 4
+        self._border_line_width = 1.5
 
         self._lake_fill_color = '#88CCFF'
         self._lake_line_color = None
         self._lake_line_width = None
 
         self._river_fill_color = '#88CCFF'
-        self._river_line_width = 2
+        self._river_line_width = 1
 
         self._glacier_fill_color = '#eeeeee'
         self._glacier_line_color = None
