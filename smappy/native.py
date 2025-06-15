@@ -61,7 +61,7 @@ class NativeMap(mapbase.AbstractMap):
             if not mf.get_title_display() == mapbase.TitleDisplay.NEXT_TO_SYMBOL:
                 continue
 
-            radius = ((mf.get_scale() or 10) + 2)
+            radius = ((mf.get_scale() or 10) + 2) * RESIZE_FACTOR
             bbox = drawer.get_bbox(marker.get_title(), mf.get_text_style())
             pos = bboxer.find_text_position(pt,
                                             marker.get_title(),
@@ -314,7 +314,16 @@ class PngDrawer:
             lc = line_format.get_line_color().as_int_tuple(255)
         if fill_color:
             fc = fill_color.as_int_tuple(255)
-        self._draw.polygon(coords, outline = lc, width = lw, fill = fc)
+
+        # CORRECT CODE, but very slow, because of
+        #   https://github.com/python-pillow/Pillow/issues/8976
+        # self._draw.polygon(coords, outline = lc, width = lw, fill = fc)
+
+        # TEMPORARY WORKAROUND UNTIL NEXT RELEASE
+        ink, fill_ink = self._draw._getink(lc, fc)
+        if fill_ink:
+            self._draw.draw.draw_polygon(coords, fill_ink, 1)
+        self._draw.draw.draw_polygon(coords, ink, 0, lw)
 
     def circle(self, point, radius, fill, line_format):
         'point is center coordinates'

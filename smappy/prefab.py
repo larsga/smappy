@@ -7,7 +7,7 @@ class MapStyle:
     def __init__(self):
         self._border_fill_color = '#409050'
         self._border_line_color = 'rgb(10%,10%,10%)'
-        self._border_line_width = 1
+        self._border_line_width = 4
 
         self._lake_fill_color = '#88CCFF'
         self._lake_line_color = None
@@ -170,7 +170,7 @@ map_views = {
     'west-europe' : MapView(east = -4, west = 28, south = 52.5, north = 63.5,
                             width = 2000, height = 1600),
     'south-finland' : MapView(east = 23, west = 27, south = 59, north = 64),
-    'baltic' : MapView(east = 24, west = 26, south = 53.5, north = 59.7,
+    'baltic' : MapView(east = 28.3, west = 20.8, south = 53.5, north = 59.7,
                        width = 1600, height = 1200),
     'denmark' : MapView(east = 15.3, west = 7.8, south = 54.5, north = 57.9,
                         width = 1400, height = 1200),
