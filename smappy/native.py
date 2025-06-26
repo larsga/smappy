@@ -35,7 +35,11 @@ class NativeMap(mapbase.AbstractMap):
             drawer = PdfDrawer(self._view.width,
                                self._view.height,
                                self._background)
+
+        # resize factor comes back in here, but that's really fucked up
+        # we should rescale inside the drawer
         (width, height) = drawer.get_size()
+
         projector = make_projector(self._view, width, height)
 
         for layer in self._layers:
@@ -85,7 +89,7 @@ class NativeMap(mapbase.AbstractMap):
 
     def _add_legend(self, drawer):
         used_symbols = list(self._symbols)
-        legend_scale = self._legend.get_scale() * RESIZE_FACTOR
+        legend_scale = self._legend.get_scale() #* RESIZE_FACTOR
 
         style = mapbase.TextStyle(font_name = 'Arial',
                                   font_size = 24 * self._legend.get_scale(),
@@ -136,7 +140,7 @@ class NativeMap(mapbase.AbstractMap):
             if symbol.get_shape() == mapbase.Shape.CIRCLE:
                 drawer.circle(
                     (x1 + offset + r, y1 + offset + displacement + r),
-                    r / RESIZE_FACTOR, # it's already in there once
+                    r,
                     symbol.get_fill_color(),
                     symbol
                 )
@@ -351,7 +355,7 @@ class PngDrawer:
 
     def circle(self, point, radius, fill, line_format):
         'point is center coordinates'
-        width = line_format.get_line_width() * RESIZE_FACTOR
+        width = line_format.get_line_width()
         line_color = line_format.get_line_color().as_int_tuple(255)
         self._draw.circle(point, radius * RESIZE_FACTOR,
                           fill = fill.as_int_tuple(255),
@@ -405,6 +409,14 @@ class PdfDrawer:
         style = self._set_line_and_fill(line_format, fill_color)
         self._pdf.polygon(coords, style = style)
 
+    def line(self, coords, line_format):
+        style = self._set_line_and_fill(line_format, None)
+        for ix in range(len(coords) - 1):
+            self._pdf.line(x1 = coords[ix][0],
+                           y1 = coords[ix][1],
+                           x2 = coords[ix + 1][0],
+                           y2 = coords[ix + 1][1])
+
     def _set_line_and_fill(self, line_format, fill_color):
         'Returns drawing style'
         if fill_color:
@@ -412,7 +424,7 @@ class PdfDrawer:
             self._pdf.set_fill_color(r, g, b)
 
         if line_format:
-            self._pdf.set_line_width(line_format.get_line_width())
+            self._pdf.set_line_width(line_format.get_line_width() / 1.5)
             (r, g, b) = line_format.get_line_color().as_int_tuple(255)
             self._pdf.set_draw_color(r, g, b)
         else:
@@ -430,14 +442,21 @@ class PdfDrawer:
         self._pdf.circle(point[0], point[1], radius, style = style)
 
     def get_bbox(self, text, style):
+        'returns (left, top, right, bottom)'
         self._install_font(style)
-        return (0, 0, 1, 1)
+        #self._pdf.get_string_width(text)
+        estimate = (len(text) / 2.7) * style.get_font_size()
+        return (0, 0, estimate, style.get_font_size())
 
     def _install_font(self, style):
-        font = style.get_font_name()
-        if font not in self._installed_fonts:
-            self._pdf.add_font(family = extract_font_name(font), fname = font)
-            self._installed_fonts.add(font)
+        pass
+
+        # FIXME: not sure how to get this to work again
+
+        # font = style.get_font_name()
+        # if font not in self._installed_fonts:
+        #     self._pdf.add_font(family = extract_font_name(font), fname = font)
+        #     self._installed_fonts.add(font)
 
     def text(self, point, text, style):
         self._install_font(style)
@@ -465,4 +484,6 @@ class PdfDrawer:
 def extract_font_name(filename):
     ix = filename.rfind('/')
     ix2 = filename.rfind('.')
+    if ix2 == -1:
+        ix2 = len(filename)
     return filename[ix+1 : ix2]
