@@ -80,6 +80,8 @@ class NativeMap(mapbase.AbstractMap):
             self._add_legend(drawer)
 
         drawer.write_to(filename)
+        if self._view.transform:
+            self._view.transform(filename, None)
 
     def _add_legend(self, drawer):
         used_symbols = list(self._symbols)
@@ -353,7 +355,7 @@ class PngDrawer:
         line_color = line_format.get_line_color().as_int_tuple(255)
         self._draw.circle(point, radius * RESIZE_FACTOR,
                           fill = fill.as_int_tuple(255),
-                          width = width,
+                          width = int(width * RESIZE_FACTOR),
                           outline = line_color)
 
     def get_bbox(self, text, style):

@@ -85,7 +85,7 @@ def _norway_montage(filename, legend_box):
 
     # crop: (left, upper, right, lower)
     southern_no = im.crop((0, 1440, 720, 2500))   # 720x1060
-    northern_no = im.crop((530, 380, 1250, 1440)) # 720x1060
+    northern_no = im.crop((460, 380, 1180, 1440)) # 720x1060
 
     composite = Image.new('RGB', (1440, 1060))
     composite.paste(southern_no, (0, 0))
@@ -144,15 +144,15 @@ map_views = {
                        width = 1200, height = 1250),
     'arctic-norway' : MapView(east = 20, west = 30, south = 65, north = 71.5,
                               width = 1200, height = 800),
-    'mid-norway' : MapView(east = 7.5, west = 10, south = 59, north = 63,
+    'mid-norway' : MapView(west = 7.5, east = 10, south = 59, north = 63,
                            width = 1400, height = 1200),
-    'norway-montage' : MapView(east = 6, west = 30, south = 57.9, north = 71.5,
+    'norway-montage' : MapView(west = 4, east = 28, south = 57.9, north = 71.5,
                                width = 2200, height = 2500,
                                transform = _norway_montage),
     'sweden-montage' : MapView(east = 12.1, west = 25.2, south = 55.0,
                                north = 69.4, width = 1200, height = 3600,
                                transform = _sweden_montage),
-    'norway-south' : MapView(east = 6, west = 11, south = 58.0, north = 62,
+    'norway-south' : MapView(west = 4, east = 12, south = 58, north = 63,
                                width = 1400, height = 1400),
     'norway-west' : MapView(east = 6, west = 9, south = 60, north = 63,
                                width = 1400, height = 1200),
