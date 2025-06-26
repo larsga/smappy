@@ -410,7 +410,7 @@ class PdfDrawer:
         self._pdf.polygon(coords, style = style)
 
     def line(self, coords, line_format):
-        style = self._set_line_and_fill(line_format, None)
+        self._set_line_and_fill(line_format, None)
         for ix in range(len(coords) - 1):
             self._pdf.line(x1 = coords[ix][0],
                            y1 = coords[ix][1],
