@@ -27,18 +27,12 @@ class NativeMap(mapbase.AbstractMap):
         bboxer = OverlapIndex()
 
         # --- draw the map
+        width = self._view.width
+        height = self._view.height
         if format == 'png':
-            drawer = PngDrawer(self._view.width,
-                               self._view.height,
-                               self._background)
+            drawer = PngDrawer(width, height, self._background)
         else:
-            drawer = PdfDrawer(self._view.width,
-                               self._view.height,
-                               self._background)
-
-        # resize factor comes back in here, but that's really fucked up
-        # we should rescale inside the drawer
-        (width, height) = drawer.get_size()
+            drawer = PdfDrawer(width, height, self._background)
 
         projector = make_projector(self._view, width, height)
 
@@ -89,7 +83,7 @@ class NativeMap(mapbase.AbstractMap):
 
     def _add_legend(self, drawer):
         used_symbols = list(self._symbols)
-        legend_scale = self._legend.get_scale() #* RESIZE_FACTOR
+        legend_scale = self._legend.get_scale()
 
         style = mapbase.TextStyle(font_name = 'Arial',
                                   font_size = 24 * self._legend.get_scale(),
@@ -116,7 +110,7 @@ class NativeMap(mapbase.AbstractMap):
             y1 = offset
             y2 = offset + boxheight
         else:
-            (width, height) = drawer.get_size()
+            (width, height) = (self._view.width, self._view.height)
             y1 = height - (boxheight + offset)
             y2 = height - offset
 
@@ -124,7 +118,7 @@ class NativeMap(mapbase.AbstractMap):
             x1 = offset
             x2 = offset + boxwidth
         else:
-            (width, height) = drawer.get_size()
+            (width, height) = (self._view.width, self._view.height)
             x1 = width - (offset + boxwidth)
             x2 = width - offset
 
@@ -334,6 +328,8 @@ class PngDrawer:
         if fill_color:
             fc = fill_color.as_int_tuple(255)
 
+        coords = [(x * RESIZE_FACTOR, y * RESIZE_FACTOR) for (x, y) in coords]
+
         # CORRECT CODE, but very slow, because of
         #   https://github.com/python-pillow/Pillow/issues/8976
         # self._draw.polygon(coords, outline = lc, width = lw, fill = fc)
@@ -351,10 +347,12 @@ class PngDrawer:
             lw = int(line_format.get_line_width()) * RESIZE_FACTOR
             lc = line_format.get_line_color().as_int_tuple(255)
 
+        coords = [(x * RESIZE_FACTOR, y * RESIZE_FACTOR) for (x, y) in coords]
         self._draw.line(coords, fill = lc, width = lw)
 
     def circle(self, point, radius, fill, line_format):
         'point is center coordinates'
+        point = (point[0] * RESIZE_FACTOR, point[1] * RESIZE_FACTOR)
         width = line_format.get_line_width()
         line_color = line_format.get_line_color().as_int_tuple(255)
         self._draw.circle(point, radius * RESIZE_FACTOR,
@@ -363,8 +361,10 @@ class PngDrawer:
                           outline = line_color)
 
     def get_bbox(self, text, style):
+        # don't scale by resize factor, because the answer here is given in
+        # user-scale coordinates. caller will be computing without scaling
         font = ImageFont.truetype(style.get_font_name(),
-                                  style.get_font_size() * RESIZE_FACTOR,
+                                  style.get_font_size(),
                                   encoding = 'unic')
         return font.getbbox(text)
 
@@ -372,6 +372,7 @@ class PngDrawer:
         font = ImageFont.truetype(style.get_font_name(),
                                   style.get_font_size() * RESIZE_FACTOR,
                                   encoding = 'unic')
+        point = (point[0] * RESIZE_FACTOR, point[1] * RESIZE_FACTOR)
         self._draw.text(point, text,
                         font = font,
                         fill = style.get_font_color().as_int_tuple(255),
