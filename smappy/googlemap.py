@@ -31,13 +31,14 @@ class GoogleMap(mapbase.AbstractMap):
         return self._apikey
 
     def render_to(self, filename:str , width: str = '100%',
-                  height: str = '100%', format: str = 'html'):
+                  height: str = '100%', format: str = 'html',
+                  append: str = ''):
         format = format or 'html'
         if format != 'html':
             raise mapbase.SmappyException('Incorrect format "%s"' % format)
 
         filename = mapbase.add_extension(filename, format)
-        _render(self, filename, width, height)
+        _render(self, filename, width, height, append)
 
 # ===== RENDERING
 
@@ -47,7 +48,7 @@ def _to_jstr(value):
 
     return "'%s'" % value.replace("'", "\\'")
 
-def _render(themap, filename, width = '100%', height = '100%', bottom = ''):
+def _render(themap, filename, width = '100%', height = '100%', append = ''):
     outf = open(filename, 'w', encoding = 'utf-8')
     outf.write('''
 <meta name="viewport" content="width=device-width"> <!-- mobile scaling -->
@@ -192,7 +193,7 @@ function add_marker(theid, lat, lng, title, symbol, label, textcolor, data) {
             %s<br>%s</div>
         ''' % (marker.get_id(), marker.get_title(), desc))
 
-    outf.write(bottom)
+    outf.write(append)
     outf.close()
 
 def render_marker_type(outf, marker):

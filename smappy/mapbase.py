@@ -147,16 +147,20 @@ class Marker:
                  label:str = None,
                  scale:float = None,
                  text_style: TextStyle = DEFAULT_TEXT_STYLE,
-                 title_display: TitleDisplay = TitleDisplay.NO_DISPLAY):
+                 title_display: TitleDisplay = TitleDisplay.NO_DISPLAY,
+                 shape: Shape = Shape.CIRCLE,
+                 marker_id: str|None = None):
         '''label: name for the class of things represented by the marker'''
         self._fill_color = to_color(fill_color)
         self._label = label
         self._scale = scale
         self._text_style = text_style
         self._title_display = title_display
+        self._shape = shape
+        self._id = marker_id or 'marker%s' % id(self)
 
     def get_id(self):
-        return 'marker%s' % id(self)
+        return self._id
 
     def get_label(self):
         return self._label
@@ -165,7 +169,7 @@ class Marker:
         return self._fill_color
 
     def get_shape(self):
-        return Shape.CIRCLE
+        return self._shape
 
     def get_text_style(self):
         return self._text_style
@@ -190,11 +194,13 @@ class Marker:
 
 class PositionedMarker:
 
-    def __init__(self, lat: float, lng: float, title: str, marker: Marker):
+    def __init__(self, lat: float, lng: float, title: str, marker: Marker,
+                 data: dict = {}):
         self._lat = float(lat)
         self._lng = float(lng)
         self._title = title
         self._marker = marker
+        self._data = data
 
     def get_id(self):
         return 'posm%s' % id(self)
@@ -215,7 +221,7 @@ class PositionedMarker:
         return None
 
     def get_data(self):
-        return {} # not sure what this is
+        return self._data
 
     def get_text_inside_symbol(self) -> str|None:
         'This is the text we display inside the circle/triangle/...'
@@ -299,13 +305,14 @@ class AbstractMap:
             legend = Legend()
         self._legend = legend
 
-    def get_symbols(self):
-        return self._symbols
-
     def add_marker(self, lat: float, lng: float, title: str,
-                   marker: Marker, descr : str|None = None):
-        self._markers.append(PositionedMarker(lat, lng, title, marker))
+                   marker: Marker, descr : str|None = None,
+                   data: dict = {}):
+        self._markers.append(PositionedMarker(lat, lng, title, marker, data))
         self._symbols.add(marker)
+
+    # def get_symbols(self):
+    #     return self._symbols
 
     def get_marker_types(self):
         return self._symbols
