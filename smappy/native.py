@@ -614,20 +614,6 @@ def add_color(color, delta):
             color[1] + delta[1],
             color[2] + delta[2])
 
-def value_to_color(value):
-    meters_0    = (64, 144, 80)   # '#409050'
-    meters_800  = (239, 236, 198) # pale tan colour
-    meters_1500 = (166, 137, 90)  # dark brown
-    meters_3000 = (255, 255, 255) # white
-
-    if value <= 800:
-        return intermediate_color(meters_0, meters_800, value / 800)
-    elif value <= 1500:
-        return intermediate_color(meters_800, meters_1500, (value-800) / 700)
-    else:
-        return intermediate_color(meters_1500, meters_3000,
-                                  (min(value, 3000) - 1500) / 1500)
-
 def value_to_color(value, stops):
     for (ix, (stop, color)) in enumerate(stops):
         if value <= stop:
