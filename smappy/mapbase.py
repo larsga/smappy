@@ -311,9 +311,6 @@ class AbstractMap:
         self._markers.append(PositionedMarker(lat, lng, title, marker, data))
         self._symbols.add(marker)
 
-    # def get_symbols(self):
-    #     return self._symbols
-
     def get_marker_types(self):
         return self._symbols
 

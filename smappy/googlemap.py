@@ -170,7 +170,7 @@ function add_marker(theid, lat, lng, title, symbol, label, textcolor, data) {
 
     if themap._legend:
         outf.write('<div id="legend">\n')
-        for symbol in themap.get_symbols():
+        for symbol in themap.get_marker_types():
             outf.write('''
               <svg height="19" width="16">
                 <circle cx="8" cy="13" r="5" stroke="black" stroke-width="1"
