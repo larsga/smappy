@@ -24,8 +24,6 @@ class NativeMap(mapbase.AbstractMap):
         filename = mapbase.add_extension(filename, format)
         assert format in ('png', 'pdf')
 
-        bboxer = OverlapIndex()
-
         # --- draw the map
         width = self._view.width
         height = self._view.height
@@ -59,6 +57,14 @@ class NativeMap(mapbase.AbstractMap):
             else:
                 assert False, 'Unknown layer type: %s' % layer
 
+        bboxer = OverlapIndex()
+        for marker in self._markers: # FIXME: skip if no text placement
+            pt = (marker.get_longitude(), marker.get_latitude())
+            pt = projector(pt)
+            radius = ((marker.get_marker().get_scale() or 10) + 2)
+            bboxer.add_bbox((pt[0] - (radius + 2), pt[1] - (radius + 2),
+                             pt[0] + (radius + 2), pt[1] + (radius + 2)))
+
         for marker in self._markers:
             mf = marker.get_marker()
 
@@ -71,7 +77,7 @@ class NativeMap(mapbase.AbstractMap):
             if not mf.get_title_display() == mapbase.TitleDisplay.NEXT_TO_SYMBOL:
                 continue
 
-            radius = ((mf.get_scale() or 10) + 2) * RESIZE_FACTOR
+            radius = ((mf.get_scale() or 10) + 2)
             bbox = drawer.get_bbox(marker.get_title(), mf.get_text_style())
             pos = bboxer.find_text_position(pt,
                                             marker.get_title(),
@@ -176,20 +182,27 @@ class OverlapIndex:
 
     def find_text_position(self, pt, text, bbox, radius):
         height = bbox[3] - bbox[1]
+        width = bbox[2] - bbox[0]
 
         # first try on the right
-        pos = (pt[0] + radius, pt[1] - (height/2) - 5 * RESIZE_FACTOR)
-        pbbox = (bbox[0] + pos[0], bbox[1] + pos[1],
-                 bbox[2] + pos[0], bbox[3] + pos[1])
+        pos = (pt[0] + radius, pt[1] - (height - 5))
+        pbbox = (pt[0] + radius + 3, pos[1],
+                 pt[0] + radius + 3 + width, pt[1] + (height - 5))
 
         if self.overlaps(pbbox):
-            print('Overlaps: ', text)
+            # print('Overlaps: ', text)
+            # okay, so let's try on the left, then
+            pos = (pt[0] - radius - width, pt[1] - (height - 5))
+            pbbox = (pt[0] + radius + 3 - width, pos[1],
+                     pt[0] + radius + 3, pt[1] + (height - 5))
+        # else:
+        #     print('Overlaps not:', text)
 
         self._bboxes.append(pbbox)
 
         return pos
 
-    def add_bbox(self, pos, bbox):
+    def add_bbox(self, bbox):
         self._bboxes.append(bbox)
 
     def overlaps(self, pbbox):
@@ -199,17 +212,12 @@ class OverlapIndex:
         return False
 
 def overlaps(bbox1, bbox2):
-    (left1, top1, right1, bottom1) = bbox1
-    (left2, top2, right2, bottom2) = bbox2
-    return lines_cross(((left1, top1), (right1, top1)),
-                       ((left2, top2), (left2, bottom2)))
-
-def lines_cross(line1, line2):
-    return False
-    # (start1, end1) = line1
-    # (start2, end2) = line2
-    # return ((start2[1] > start1[1] and start2[1] < end1[1]) and
-    #         (start1[0]
+    (ax1, ay1, ax2, ay2) = bbox1
+    (bx1, by1, bx2, by2) = bbox2
+    return not (ax1 > bx2 or
+                ax2 < bx1 or
+                ay1 > by2 or
+                ay2 < by1)
 
 # --- PROJECTIONS
 
@@ -339,15 +347,7 @@ class PngDrawer:
 
         coords = [(x * RESIZE_FACTOR, y * RESIZE_FACTOR) for (x, y) in coords]
 
-        # CORRECT CODE, but very slow, because of
-        #   https://github.com/python-pillow/Pillow/issues/8976
-        # self._draw.polygon(coords, outline = lc, width = lw, fill = fc)
-
-        # TEMPORARY WORKAROUND UNTIL NEXT RELEASE
-        ink, fill_ink = self._draw._getink(lc, fc)
-        if fill_ink:
-            self._draw.draw.draw_polygon(coords, fill_ink, 1)
-        self._draw.draw.draw_polygon(coords, ink, 0, lw)
+        self._draw.polygon(coords, outline = lc, width = lw, fill = fc)
 
     def line(self, coords, line_format):
         lw = 0
@@ -534,7 +534,6 @@ def render_raster(drawer, view, projector, filename, stops):
     while lat > view.south:
         while lng < view.east:
             value = band1[row, col]
-            # print(lng, lat, value)
             (x, y) = projector((lng, lat))
             if value >= minimum_value:
                 try:

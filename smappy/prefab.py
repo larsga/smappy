@@ -1,6 +1,6 @@
 
 import tomllib
-from smappy import mapbase, native# , mapniklib
+from smappy import mapbase, native
 
 class MapStyle:
 
@@ -164,7 +164,7 @@ map_views = {
                                width = 2000, height = 1600),
     'norway-sweden' : MapView(east = 6, west = 18, south = 57.9, north = 63.9,
                               width = 1800, height = 1200),
-    'europe' : MapView(east = 4, west = 50, south = 50, north = 65),
+    'europe' : MapView(west = 4, east = 50, north = 65, south = 50),
     'europe-trim' : MapView(east = -3, west = 54, south = 50, north = 62.5,
                            width = 2000, height = 1400),
     'west-europe' : MapView(east = -4, west = 28, south = 52.5, north = 63.5,
@@ -180,8 +180,8 @@ map_views = {
                         width = 1600, height = 800),
     'world' : MapView(east = -160, west = 160, south = -57, north = 84,
                       width = 3000, height = 2000),
-    'germany' : MapView(east = 5, west = 24, south = 47, north = 56,
-                      width = 2000, height = 1600),
+    'germany' : MapView(west = 5, east = 20, north = 52, south = 46,
+                      width = 1800, height = 1600),
     'ukraine' : MapView(north = 52.6, west = 21.7,
                         south = 44.4, east = 41.6,
                         width = 2000, height = 1600),
@@ -203,7 +203,12 @@ def build_natural_earth(view, shapedir, map_style = default_map_style,
 
     if elevation:
         raster = shapedir + '/ETOPO1/ETOPO1_Ice_c_geotiff.tif'
-        themap.add_raster(raster, STOPS)
+        themap.add_raster(raster, VIVID_STOPS)
+
+        # need to redo borders without fill
+        themap.add_shapes(borders,
+                          line_color = map_style._border_line_color,
+                          line_width = map_style._border_line_width)
 
     lakes = shapedir + 'ne_10m_lakes/ne_10m_lakes.shp'
     themap.add_shapes(lakes,
@@ -242,7 +247,7 @@ def build_natural_earth(view, shapedir, map_style = default_map_style,
 # ELEVATION COLOUR SCHEMES
 
 # best green - yellow - brown - white attempt
-STOPS = [
+VIVID_STOPS = [
     (0,    (64, 144, 80)),   # old land green, same as ever
     (800,  (240, 232, 120)), # somewhat saturated yellow
     (1500, (128, 98, 51)),   # a good brown
@@ -250,8 +255,8 @@ STOPS = [
 ]
 
 # trying green - dark green - dark brown - white
-STOPS = [
-    (0,    (64, 144, 80)),   # old land green, same as ever
+DARK_STOPS = [
+    (0,    (64, 144, 80)),    # old land green, same as ever
     (1200,  (16, 36, 20)),    # dark green (/4)
     (1900, (102, 79, 41)),    # darker brown, v=50->40
     (3000, (255, 255, 255))
