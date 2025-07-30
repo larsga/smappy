@@ -37,18 +37,27 @@ class NativeMap(mapbase.AbstractMap):
         projector = make_projector(self._view, width, height)
 
         for layer in self._layers:
-            features = extract_features(layer.get_geometry_file(),
-                                        layer.get_selectors())
-            for feature in features:
-                (linestrings, closed) = convert_to_linestrings(feature)
-                for linestring in linestrings:
-                    coords = [projector(coord) for coord in linestring]
+            if isinstance(layer, mapbase.ShapeLayer):
+                features = extract_features(layer.get_geometry_file(),
+                                            layer.get_selectors())
+                for feature in features:
+                    (linestrings, closed) = convert_to_linestrings(feature)
+                    for linestring in linestrings:
+                        coords = [projector(coord) for coord in linestring]
 
-                    if closed:
-                        drawer.polygon(coords, layer.get_line_format(),
-                                       layer.get_fill_color())
-                    else:
-                        drawer.line(coords, layer.get_line_format())
+                        if closed:
+                            drawer.polygon(coords, layer.get_line_format(),
+                                           layer.get_fill_color())
+                        else:
+                            drawer.line(coords, layer.get_line_format())
+
+            elif isinstance(layer, mapbase.RasterLayer):
+                render_raster(drawer, self._view, projector,
+                            layer.get_raster_file(),
+                            layer.get_stops())
+
+            else:
+                assert False, 'Unknown layer type: %s' % layer
 
         for marker in self._markers:
             mf = marker.get_marker()
@@ -313,7 +322,7 @@ class PngDrawer:
         self._img = Image.new('RGB', (width * RESIZE_FACTOR,
                                       height * RESIZE_FACTOR),
                               background.as_int_tuple(255))
-        self._draw = ImageDraw.Draw(self._img)
+        self._draw = ImageDraw.Draw(self._img, mode = 'RGB')
 
     def get_size(self):
         return (self._img.width, self._img.height)
@@ -378,6 +387,17 @@ class PngDrawer:
                         fill = style.get_font_color().as_int_tuple(255),
                         stroke_width = style.get_halo_radius() * RESIZE_FACTOR,
                         stroke_fill = style.get_halo_color().as_int_tuple(255))
+
+    def bitmap(self, image, pos, mask):
+        image = Image.fromarray(image, mode = 'RGB')
+        mask = Image.fromarray(mask, mode = 'L')
+        image = image.resize((image.size[0] * RESIZE_FACTOR,
+                              image.size[1] * RESIZE_FACTOR),
+                           Image.Resampling.NEAREST)
+        mask = mask.resize((mask.size[0] * RESIZE_FACTOR,
+                            mask.size[1] * RESIZE_FACTOR),
+                           Image.Resampling.NEAREST)
+        self._img.paste(image, (0, 0), mask)
 
     def write_to(self, filename):
         if RESIZE_FACTOR != 1:
@@ -488,3 +508,142 @@ def extract_font_name(filename):
     if ix2 == -1:
         ix2 = len(filename)
     return filename[ix+1 : ix2]
+
+# ===========================================================================
+# EXPERIMENTAL RASTER IMPLEMENTATION
+
+def render_raster(drawer, view, projector, filename, stops):
+    # step 1: render into buffer matching view dimensions
+    import rasterio, numpy
+
+    minimum_value = stops[0][0]
+
+    dataset = rasterio.open(filename)
+    band1 = dataset.read(1)
+
+    (lng, lat) = (view.west, view.north)
+    lat = find_correct_north(lng, lat, projector)
+
+    (row, col) = dataset.index(lng, lat)
+    startcol = col
+
+    buffer = numpy.zeros((view.height, view.width, 3),
+                         dtype = numpy.uint8) # 3-tuples of (RGB)
+    mask = numpy.zeros((view.height, view.width),
+                         dtype = numpy.uint8) # 1-tuples of (A)
+    while lat > view.south:
+        while lng < view.east:
+            value = band1[row, col]
+            # print(lng, lat, value)
+            (x, y) = projector((lng, lat))
+            if value >= minimum_value:
+                try:
+                    buffer[int(y)][int(x)] = value_to_color(value, stops)
+                    mask[int(y)][int(x)] = 255
+                except IndexError:
+                    pass # we don't care
+            else:
+                try:
+                    mask[int(y)][int(x)] = 1 # means: pixel with no value
+                except IndexError:
+                    pass # we don't care
+
+            col += 1
+            (lng, lat) = dataset.xy(row, col)
+
+        row += 1
+        col = startcol
+        (lng, lat) = dataset.xy(row, col)
+
+    # step 2: interpolate missing data
+    interpolate(buffer, mask)
+
+    # step 3: paste into drawer
+    drawer.bitmap(buffer, (0, 0), mask)
+
+def interpolate(buffer, mask):
+    for y in range(buffer.shape[0]):
+        prev_x = None
+        prev_m = None
+        for x in range(buffer.shape[1]):
+            if mask[y][x] == 255:
+                if prev_m == 255 and prev_x + 1 < x:
+                    colordelta = diff(buffer[y][prev_x], buffer[y][x],
+                                      x - prev_x)
+                    color = buffer[y][prev_x]
+                    while prev_x+1 < x:
+                        prev_x += 1
+                        color = add_color(color, colordelta)
+                        buffer[y][prev_x] = color
+                        mask[y][prev_x] = 255
+
+                prev_x = x
+                prev_m = 255
+            elif mask[y][x] == 1:
+                if prev_m == 1:
+                    for xx in range(prev_x + 1, x):
+                        mask[y][xx] = 1 # interpolate 'no data'
+                prev_x = x
+                prev_m = 1
+
+    for x in range(buffer.shape[1]):
+        prev_y = None
+        for y in range(buffer.shape[0]):
+            if mask[y][x] == 255:
+                if prev_y is not None and prev_y + 1 < y:
+                    colordelta = diff(buffer[prev_y][x], buffer[y][x],
+                                      y - prev_y)
+                    color = buffer[prev_y][x]
+                    while prev_y+1 < y:
+                        prev_y += 1
+                        color = add_color(color, colordelta)
+                        buffer[prev_y][x] = color
+                        mask[prev_y][x] = 255
+
+                prev_y = y
+            elif mask[y][x] == 1:
+                prev_y = None
+
+def diff(c1, c2, dist):
+    return ((int(c2[0]) - int(c1[0])) / dist,
+            (int(c2[1]) - int(c1[1])) / dist,
+            (int(c2[2]) - int(c1[2])) / dist)
+
+def add_color(color, delta):
+    return (color[0] + delta[0],
+            color[1] + delta[1],
+            color[2] + delta[2])
+
+def value_to_color(value):
+    meters_0    = (64, 144, 80)   # '#409050'
+    meters_800  = (239, 236, 198) # pale tan colour
+    meters_1500 = (166, 137, 90)  # dark brown
+    meters_3000 = (255, 255, 255) # white
+
+    if value <= 800:
+        return intermediate_color(meters_0, meters_800, value / 800)
+    elif value <= 1500:
+        return intermediate_color(meters_800, meters_1500, (value-800) / 700)
+    else:
+        return intermediate_color(meters_1500, meters_3000,
+                                  (min(value, 3000) - 1500) / 1500)
+
+def value_to_color(value, stops):
+    for (ix, (stop, color)) in enumerate(stops):
+        if value <= stop:
+            dist = (value - stops[ix-1][0]) / (stop - stops[ix-1][0])
+            return intermediate_color(stops[ix-1][1], color, dist)
+    return color # max out to last colour
+
+def intermediate_color(c1, c2, percent):
+    # percent 0.0 => c1
+    # percent 1.0 => c2
+    delta = [d * (1000 * percent) for d in diff(c1, c2, 1000)]
+    return add_color(c1, delta)
+
+def find_correct_north(lng, lat, projector):
+    pos = projector((lng, lat))
+    while pos[1] > 1:
+        lat += 0.01
+        pos = projector((lng, lat))
+    return lat

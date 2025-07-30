@@ -272,6 +272,18 @@ class ShapeLayer:
     def get_selectors(self):
         return self._selectors
 
+class RasterLayer:
+
+    def __init__(self, rasterfile, stops):
+        self._rasterfile = rasterfile
+        self._stops = stops
+
+    def get_raster_file(self):
+        return self._rasterfile
+
+    def get_stops(self):
+        return self._stops
+
 # ===== BASE MAP
 
 class AbstractMap:
@@ -296,6 +308,9 @@ class AbstractMap:
                                        to_color(fill_color),
                                        fill_opacity,
                                        selectors))
+
+    def add_raster(self, rasterfile, stops):
+        self._layers.append(RasterLayer(rasterfile, stops))
 
     def add_text_label(self, lat: float, lng: float, text: str, style) -> None:
         self._labels.append((text, lat, lng, style))

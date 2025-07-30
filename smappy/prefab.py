@@ -190,9 +190,8 @@ map_views = {
                         width = 1000, height = 2000),
 }
 
-def build_natural_earth(view, shapedir, map_style = default_map_style):
-    # themap = mapniklib.MapnikMap(view,
-    #                              background_color = map_style._lake_fill_color)
+def build_natural_earth(view, shapedir, map_style = default_map_style,
+                        elevation = False):
     themap = native.NativeMap(view,
                               background_color = map_style._lake_fill_color)
 
@@ -201,6 +200,10 @@ def build_natural_earth(view, shapedir, map_style = default_map_style):
                       line_color = map_style._border_line_color,
                       line_width = map_style._border_line_width,
                       fill_color = map_style._border_fill_color)
+
+    if elevation:
+        raster = shapedir + '/ETOPO1/ETOPO1_Ice_c_geotiff.tif'
+        themap.add_raster(raster, STOPS)
 
     lakes = shapedir + 'ne_10m_lakes/ne_10m_lakes.shp'
     themap.add_shapes(lakes,
@@ -234,3 +237,41 @@ def build_natural_earth(view, shapedir, map_style = default_map_style):
                       line_color = map_style._glacier_line_color)
 
     return themap
+
+# ===========================================================================
+# ELEVATION COLOUR SCHEMES
+
+# best green - yellow - brown - white attempt
+STOPS = [
+    (0,    (64, 144, 80)),   # old land green, same as ever
+    (800,  (240, 232, 120)), # somewhat saturated yellow
+    (1500, (128, 98, 51)),   # a good brown
+    (3000, (255, 255, 255))
+]
+
+# trying green - dark green - dark brown - white
+STOPS = [
+    (0,    (64, 144, 80)),   # old land green, same as ever
+    (1200,  (16, 36, 20)),    # dark green (/4)
+    (1900, (102, 79, 41)),    # darker brown, v=50->40
+    (3000, (255, 255, 255))
+]
+
+# # the old colour scheme from when we used mapnik
+# STOPS = [
+#     (0, (64, 144, 80)),
+#     (250, (58, 130, 72)),
+#     (500, (37, 117, 69)),
+#     (750, (27, 75, 46)),
+#     (1000, (115, 29, 14)), # brown
+#     (2500, (0, 0, 0))
+# ]
+
+# STOPS = [
+#     (0, (64, 144, 80)),
+#     (250, (58, 130, 72)),
+#     (500, (37, 117, 69)),
+#     (750, (27, 75, 46)),
+#     (1000, (100, 40, 18)), # brown (almost same, but not as red)
+#     (2500, (0, 0, 0))
+# ]
