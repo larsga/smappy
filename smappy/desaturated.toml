@@ -1,0 +1,13 @@
+
+# 25% saturation compared to default map
+
+border_fill_color = '#7c9080'
+border_line_color = 'rgb(10%,10%,10%)'
+border_line_width = 1.5
+
+lake_fill_color = '#e1f2ff'
+
+river_fill_color = '#e1f2ff'
+river_line_width = 2
+
+glacier_fill_color = '#eeeeee'
