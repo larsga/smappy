@@ -532,9 +532,14 @@ def render_raster(drawer, view, projector, filename, stops):
     mask = numpy.zeros((view.height, view.width),
                          dtype = numpy.uint8) # 1-tuples of (A)
     while lat > view.south:
+        (lng_, _) = dataset.xy(row, col + 5)
+        lng_delta = (lng_ - lng) / 5
+        (x, y) = projector((lng, lat))
+        (x_, _) = projector((lng_, lat))
+        vx = (x_ - x) / 5
+
         while lng < view.east:
             value = band1[row, col]
-            (x, y) = projector((lng, lat))
             if value >= minimum_value:
                 try:
                     buffer[int(y)][int(x)] = value_to_color(value, stops)
@@ -548,7 +553,8 @@ def render_raster(drawer, view, projector, filename, stops):
                     pass # we don't care
 
             col += 1
-            (lng, lat) = dataset.xy(row, col)
+            lng += lng_delta
+            x += vx
 
         row += 1
         col = startcol
