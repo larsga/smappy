@@ -2,6 +2,21 @@
 import tomllib
 from smappy import mapbase, native
 
+VIVID_STOPS = [
+    (0,    (64, 144, 80)),   # old land green, same as ever
+    (800,  (240, 232, 120)), # somewhat saturated yellow
+    (1500, (128, 98, 51)),   # a good brown
+    (3000, (255, 255, 255))
+]
+
+# trying green - dark green - dark brown - white
+DARK_STOPS = [
+    (0,    (64, 144, 80)),    # old land green, same as ever
+    (1200,  (16, 36, 20)),    # dark green (/4)
+    (1900, (102, 79, 41)),    # darker brown, v=50->40
+    (3000, (255, 255, 255))
+]
+
 class MapStyle:
 
     def __init__(self):
@@ -19,6 +34,8 @@ class MapStyle:
         self._glacier_fill_color = '#eeeeee'
         self._glacier_line_color = None
         self._glacier_line_width = None
+
+        self._elevation = VIVID_STOPS
 
     def get_negative_color(self):
         return '#000000'
@@ -47,6 +64,9 @@ class MapStyle:
     def get_red_color(self):
         return '#FF0000'
 
+    def get_elevation(self):
+        return self._elevation
+
 def load_map_style(filename : str) -> MapStyle:
     data = tomllib.load(open(filename, 'rb'))
 
@@ -66,9 +86,14 @@ def load_map_style(filename : str) -> MapStyle:
     style._glacier_line_color = data.get('glacier_line_color')
     style._glacier_line_width = data.get('glacier_line_width')
 
+    style._elevation = [
+        (s['height'], parse_color(s['color'])) for s in data.get('elevation', [])
+    ]
+
     return style
 
-default_map_style = MapStyle()
+def parse_color(color):
+    return mapbase.to_color(color).as_int_tuple(255)
 
 def _norway_montage(filename, legend_box):
     # hacky workaround for broken PIL
@@ -190,6 +215,8 @@ map_views = {
                         width = 1000, height = 2000),
 }
 
+default_map_style = MapStyle()
+
 def build_natural_earth(view, shapedir, map_style = default_map_style,
                         elevation = False):
     themap = native.NativeMap(view,
@@ -203,7 +230,7 @@ def build_natural_earth(view, shapedir, map_style = default_map_style,
 
     if elevation:
         raster = shapedir + '/ETOPO1/ETOPO1_Ice_c_geotiff.tif'
-        themap.add_raster(raster, VIVID_STOPS)
+        themap.add_raster(raster, map_style.get_elevation())
 
         # need to redo borders without fill
         themap.add_shapes(borders,
@@ -242,41 +269,3 @@ def build_natural_earth(view, shapedir, map_style = default_map_style,
                       line_color = map_style._glacier_line_color)
 
     return themap
-
-# ===========================================================================
-# ELEVATION COLOUR SCHEMES
-
-# best green - yellow - brown - white attempt
-VIVID_STOPS = [
-    (0,    (64, 144, 80)),   # old land green, same as ever
-    (800,  (240, 232, 120)), # somewhat saturated yellow
-    (1500, (128, 98, 51)),   # a good brown
-    (3000, (255, 255, 255))
-]
-
-# trying green - dark green - dark brown - white
-DARK_STOPS = [
-    (0,    (64, 144, 80)),    # old land green, same as ever
-    (1200,  (16, 36, 20)),    # dark green (/4)
-    (1900, (102, 79, 41)),    # darker brown, v=50->40
-    (3000, (255, 255, 255))
-]
-
-# # the old colour scheme from when we used mapnik
-# STOPS = [
-#     (0, (64, 144, 80)),
-#     (250, (58, 130, 72)),
-#     (500, (37, 117, 69)),
-#     (750, (27, 75, 46)),
-#     (1000, (115, 29, 14)), # brown
-#     (2500, (0, 0, 0))
-# ]
-
-# STOPS = [
-#     (0, (64, 144, 80)),
-#     (250, (58, 130, 72)),
-#     (500, (37, 117, 69)),
-#     (750, (27, 75, 46)),
-#     (1000, (100, 40, 18)), # brown (almost same, but not as red)
-#     (2500, (0, 0, 0))
-# ]
