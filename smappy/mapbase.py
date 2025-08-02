@@ -234,15 +234,20 @@ class PositionedMarker:
 
 class Legend:
 
-    def __init__(self, location = ('top', 'right'), scale = 1.5):
+    def __init__(self, location = ('top', 'right'), scale = 1.5,
+                 sortkeyfunc = None):
         self._location = location
         self._scale = scale
+        self._sortkeyfunc = sortkeyfunc
 
     def get_location(self):
         return self._location
 
     def get_scale(self):
         return self._scale
+
+    def get_sorting_key_function(self):
+        return self._sortkeyfunc
 
 # ===== LAYERS
 

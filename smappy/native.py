@@ -144,6 +144,8 @@ class NativeMap(mapbase.AbstractMap):
             mapbase.to_color('#ffffff')
         )
 
+        if self._legend.get_sorting_key_function():
+            used_symbols.sort(key = self._legend.get_sorting_key_function())
         for (ix, symbol) in enumerate(used_symbols):
             displacement = displace * ix
             if symbol.get_shape() == mapbase.Shape.CIRCLE:
