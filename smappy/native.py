@@ -240,12 +240,15 @@ def make_projector(view, width, height):
         adjust = (width * hr + west) - east
         east += adjust
 
+    y_factor = height / (south - north)
+    x_factor = width / (west - east)
+
     def meters2pixels(lnglat):
         # this is GeoJSON, which is lng, lat
         (lng, lat) = lnglat
-        y = (lat2y(lat) - north) / (south - north)
-        x = (west - lon2x(lng)) / (west - east)
-        return (x * width, y * height)
+        y = (lat2y(lat) - north) * y_factor
+        x = (west - lon2x(lng)) * x_factor
+        return (x, y)
 
     return meters2pixels
 
