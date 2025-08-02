@@ -230,11 +230,15 @@ def make_projector(view, width, height):
     (west, north) = northwest
     (east, south) = southeast
 
-    # this adjustment ensures the north-south and east-west sides of the map
-    # are equally long (in metres), so we don't end up skewing the map
-    side_length = max(abs(north - south), abs(east - west))
-    north = south + side_length
-    east = west + side_length
+    # adjust end of map so that equally many meters per pixel along both sides
+    hr = (north - south) / height
+    wr = (east - west) / width
+    if hr > wr:
+        adjust = (height * wr + south) - north
+        north += adjust
+    else:
+        adjust = (width * hr + west) - east
+        east += adjust
 
     def meters2pixels(lnglat):
         # this is GeoJSON, which is lng, lat
