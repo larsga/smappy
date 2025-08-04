@@ -514,6 +514,9 @@ class PdfDrawer:
         height = self._pdf.get_string_width('x') * 2.2
         self._pdf.text(point[0], point[1] + height, text)
 
+    def bitmap(self, image, pos, mask):
+        print('WARN: No bitmap support in PDF')
+
     def write_to(self, filename):
         self._pdf.output(filename)
 
