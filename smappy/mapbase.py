@@ -120,10 +120,14 @@ def to_line_format(line_color: Optional[str], line_width: Optional[float],
 class LineFormat:
 
     def __init__(self, line_color: Color, line_width: float,
-                 line_dash: Optional[tuple]):
+                 line_dash: Optional[tuple[int]]):
+        '''line_dash: tuple of numbers. First number says how long to make a
+        line, second number size of gap, third number length of line, and so
+        on. Algorithm rotates through the numbers: 1 2 3 1 2 3. Must be at
+        least two numbers.'''
         self._line_color = line_color
         self._line_width = line_width
-        self._line_dash = line_dash
+        self._line_dash = line_dash or ()
 
     def get_line_color(self):
         return self._line_color

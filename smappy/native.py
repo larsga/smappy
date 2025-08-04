@@ -348,15 +348,21 @@ class PngDrawer:
         lw = 0
         lc = (0, 0, 0)
         fc = None
+        dashing = ()
         if line_format:
             lw = int(line_format.get_line_width()) * RESIZE_FACTOR
             lc = line_format.get_line_color().as_int_tuple(255)
+            dashing = [length * RESIZE_FACTOR
+                       for length in line_format.get_line_dash()]
         if fill_color:
             fc = fill_color.as_int_tuple(255)
 
         coords = [(x * RESIZE_FACTOR, y * RESIZE_FACTOR) for (x, y) in coords]
 
-        self._draw.polygon(coords, outline = lc, width = lw, fill = fc)
+        if not dashing:
+            self._draw.polygon(coords, outline = lc, width = lw, fill = fc)
+        else:
+            draw_dashed_polygon(self._draw, coords, lc, lw, fc, dashing)
 
     def line(self, coords, line_format):
         lw = 0
@@ -647,3 +653,58 @@ def find_correct_north(lng, lat, projector):
         lat += 0.01
         pos = projector((lng, lat))
     return lat
+# ===========================================================================
+# DASHED LINE IMPLEMENTATION
+
+class Dasher:
+
+    def __init__(self, dash_pattern: tuple[int]):
+        self._dash_pattern = dash_pattern
+        self._current = 0     # where in the pattern are we?
+        self._pixels_used = 0 # how many pixels of current step used?
+        self._steps = 0       # how many steps through pattern?
+
+    def get_length_of_step(self, max_length: float) -> float:
+        return min(
+            self._dash_pattern[self._current] - self._pixels_used,
+            max_length
+        )
+
+    def step(self, step: float) -> None:
+        self._pixels_used += step
+        if self._pixels_used >= self._dash_pattern[self._current]:
+            self._current = (self._current + 1) % len(self._dash_pattern)
+            self._pixels_used = 0
+            self._steps += 1
+
+    def is_current_dash(self):
+        return self._steps % 2 == 0
+
+def dist(p1, p2):
+    return math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
+
+def draw_dashed_polygon(draw, coords, lc, lw, fc, dashing):
+    if fc:
+        draw.polygon(coords, outline = None, width = 0, fill = fc)
+
+    dasher = Dasher(dashing)
+
+    for ix in range(len(coords) - 1):
+        (x, y) = coords[ix]
+        (target_x, target_y) = coords[ix + 1]
+        rem_length = dist((x, y), (target_x, target_y))
+        vx = (target_x - x) / rem_length
+        vy = (target_y - y) / rem_length
+
+        while rem_length > 0:
+            step = dasher.get_length_of_step(rem_length)
+            nx = x + vx * step
+            ny = y + vy * step
+
+            if dasher.is_current_dash():
+                draw.line((x, y, nx, ny), fill = lc, width = lw)
+            dasher.step(step)
+
+            x = nx
+            y = ny
+            rem_length -= step
