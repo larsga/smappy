@@ -663,22 +663,22 @@ class Dasher:
 
     def __init__(self, dash_pattern: tuple[int]):
         self._dash_pattern = dash_pattern
-        self._current = 0     # where in the pattern are we?
         self._pixels_used = 0 # how many pixels of current step used?
         self._steps = 0       # how many steps through pattern?
 
-    def get_length_of_step(self, max_length: float) -> float:
-        return min(
-            self._dash_pattern[self._current] - self._pixels_used,
+    def make_next_step(self, max_length: float) -> float:
+        current = self._steps % len(self._dash_pattern)
+        step = min(
+            self._dash_pattern[current] - self._pixels_used,
             max_length
         )
 
-    def step(self, step: float) -> None:
         self._pixels_used += step
-        if self._pixels_used >= self._dash_pattern[self._current]:
-            self._current = (self._current + 1) % len(self._dash_pattern)
+        if self._pixels_used >= self._dash_pattern[current]:
             self._pixels_used = 0
             self._steps += 1
+
+        return step
 
     def is_current_dash(self):
         return self._steps % 2 == 0
@@ -700,13 +700,12 @@ def draw_dashed_polygon(draw, coords, lc, lw, fc, dashing):
         vy = (target_y - y) / rem_length
 
         while rem_length > 0:
-            step = dasher.get_length_of_step(rem_length)
+            step = dasher.make_next_step(rem_length)
             nx = x + vx * step
             ny = y + vy * step
 
             if dasher.is_current_dash():
                 draw.line((x, y, nx, ny), fill = lc, width = lw)
-            dasher.step(step)
 
             x = nx
             y = ny
