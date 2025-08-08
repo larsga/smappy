@@ -45,7 +45,8 @@ class NativeMap(mapbase.AbstractMap):
 
                         if closed:
                             drawer.polygon(coords, layer.get_line_format(),
-                                           layer.get_fill_color())
+                                           layer.get_fill_color(),
+                                           layer.get_fill_opacity())
                         else:
                             drawer.line(coords, layer.get_line_format())
 
@@ -344,7 +345,7 @@ class PngDrawer:
     def get_size(self):
         return (self._img.width, self._img.height)
 
-    def polygon(self, coords, line_format, fill_color):
+    def polygon(self, coords, line_format, fill_color, fill_opacity = 1):
         lw = 0
         lc = (0, 0, 0)
         fc = None
@@ -441,9 +442,14 @@ class PdfDrawer:
     def get_size(self):
         return self._size
 
-    def polygon(self, coords, line_format, fill_color):
+    def polygon(self, coords, line_format, fill_color, fill_opacity = 1):
         style = self._set_line_and_fill(line_format, fill_color)
-        self._pdf.polygon(coords, style = style)
+        if fill_opacity < 1:
+            fo = fill_opacity
+            with self._pdf.local_context(fill_opacity=fo):
+                self._pdf.polygon(coords, style = style)
+        else:
+            self._pdf.polygon(coords, style = style)
 
     def line(self, coords, line_format):
         self._set_line_and_fill(line_format, None)
@@ -481,7 +487,7 @@ class PdfDrawer:
         'returns (left, top, right, bottom)'
         self._install_font(style)
         #self._pdf.get_string_width(text)
-        estimate = (len(text) / 2.7) * style.get_font_size()
+        estimate = (len(text) / 2.8) * style.get_font_size()
         return (0, 0, estimate, style.get_font_size())
 
     def _install_font(self, style):

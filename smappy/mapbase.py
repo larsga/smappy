@@ -260,7 +260,7 @@ class Legend:
 class ShapeLayer:
 
     def __init__(self, geometry_file: str, line: Optional[LineFormat],
-                 fill_color: Optional[Color], fill_opacity: Optional[float],
+                 fill_color: Optional[Color], fill_opacity: float = 1.0,
                  selectors: list = []):
         self._geometry_file = geometry_file
         self._line = line
@@ -312,7 +312,7 @@ class AbstractMap:
                    line_width: Optional[float] = None,
                    line_dash: Optional[tuple] = None,
                    fill_color: Optional[str] = None,
-                   fill_opacity: Optional[float] = None,
+                   fill_opacity: float = 1.0,
                    selectors: Optional[list] = None) -> None:
         line = to_line_format(line_color, line_width, line_dash)
         self._layers.append(ShapeLayer(geometry_file, line,
