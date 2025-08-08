@@ -153,7 +153,8 @@ class Marker:
                  text_style: TextStyle = DEFAULT_TEXT_STYLE,
                  title_display: TitleDisplay = TitleDisplay.NO_DISPLAY,
                  shape: Shape = Shape.CIRCLE,
-                 marker_id: str|None = None):
+                 marker_id: str|None = None,
+                 line_color: Color = to_color('black')):
         '''label: name for the class of things represented by the marker'''
         self._fill_color = to_color(fill_color)
         self._label = label
@@ -162,6 +163,7 @@ class Marker:
         self._title_display = title_display
         self._shape = shape
         self._id = marker_id or 'marker%s' % id(self)
+        self._line_color = line_color
 
     def get_id(self):
         return self._id
@@ -172,6 +174,9 @@ class Marker:
     def get_fill_color(self):
         return self._fill_color
 
+    def get_line_color(self):
+        return self._line_color
+
     def get_shape(self):
         return self._shape
 
@@ -180,9 +185,6 @@ class Marker:
 
     def get_scale(self) -> float:
         return self._scale
-
-    def get_line_color(self):
-        return to_color('black')
 
     def get_line_width(self):
         return 1.5
