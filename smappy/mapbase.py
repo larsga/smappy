@@ -375,7 +375,7 @@ class AbstractMap:
         colors = make_color_scale(levels)
         for (idprop, idvalue, value) in region_mapping:
             ix = int(round((value - lowest) / inc)) if value is not None else None
-            color = colors[ix - 1] if ix is not None else undefined_color
+            color = colors[max(0, ix - 1)] if ix is not None else undefined_color
 
             if color not in colormapping:
                 colormapping[color] = []
@@ -401,7 +401,7 @@ def make_color_scale(count):
     inc = (len(colormaps._magma_data) - 1) / (count - 1)
     return [
         Color(*tuple([
-            x for x in colormaps._magma_data[int(inc * ix)]
+            x for x in colormaps._viridis_data[int(inc * ix)]
         ]))
         for ix in range(count)
     ]
