@@ -397,7 +397,14 @@ class PngDrawer:
         font = ImageFont.truetype(style.get_font_name(),
                                   style.get_font_size() * RESIZE_FACTOR,
                                   encoding = 'unic')
-        point = (point[0] * RESIZE_FACTOR, point[1] * RESIZE_FACTOR)
+
+        if style.get_text_align() == mapbase.TextAlignment.LEFT:
+            point = (point[0] * RESIZE_FACTOR, point[1] * RESIZE_FACTOR)
+        else:
+            offset = get_text_width(font, text) / 2
+            point = (point[0] * RESIZE_FACTOR - offset,
+                     point[1] * RESIZE_FACTOR)
+
         self._draw.text(point, text,
                         font = font,
                         fill = style.get_font_color().as_int_tuple(255),
@@ -424,6 +431,14 @@ class PngDrawer:
             img = self._img
 
         img.save(filename, 'PNG')
+
+def get_text_width(font, text):
+    'Necessary to handle linebreaks in the text'
+    width = 1000000
+    for part in text.split('\n'):
+        (left, top, right, bottom) = font.getbbox(part)
+        width = min(width, right - left)
+    return width
 
 class PdfDrawer:
 

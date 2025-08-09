@@ -78,15 +78,21 @@ def _unhexdigit(digit):
 # ===== TEXT STYLE
 # for formatting
 
+class TextAlignment(Enum):
+    LEFT = 1
+    CENTERED = 2
+
 class TextStyle:
 
     def __init__(self, font_name = None, font_size = None, font_color = None,
-                 halo_color = None, halo_radius = 0):
+                 halo_color = None, halo_radius = 0,
+                 text_align = TextAlignment.LEFT):
         self._font_name = font_name or 'DejaVu Sans Book'
         self._font_size = font_size or 30
         self._font_color = to_color(font_color or '#ffffff')
         self._halo_color = to_color(halo_color or '#000000')
         self._halo_radius = halo_radius
+        self._text_align = text_align
 
     def get_id(self):
         return 'id' + str(id(self))
@@ -105,6 +111,9 @@ class TextStyle:
 
     def get_halo_radius(self):
         return self._halo_radius
+
+    def get_text_align(self):
+        return self._text_align
 
 DEFAULT_TEXT_STYLE = TextStyle()
 
@@ -323,7 +332,7 @@ class AbstractMap:
     def add_raster(self, rasterfile, stops):
         self._layers.append(RasterLayer(rasterfile, stops))
 
-    def add_text_label(self, lat: float, lng: float, text: str, style) -> None:
+    def add_text_label(self, lat: float, lng: float, text: str, style: TextStyle) -> None:
         self._labels.append((text, lat, lng, style))
 
     def set_legend(self, legend):
