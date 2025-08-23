@@ -412,8 +412,8 @@ class PngDrawer:
                         stroke_fill = style.get_halo_color().as_int_tuple(255))
 
     def bitmap(self, image, pos, mask):
-        image = Image.fromarray(image, mode = 'RGB')
-        mask = Image.fromarray(mask, mode = 'L')
+        image = Image.fromarray(image)
+        mask = Image.fromarray(mask)
         image = image.resize((image.size[0] * RESIZE_FACTOR,
                               image.size[1] * RESIZE_FACTOR),
                            Image.Resampling.NEAREST)
