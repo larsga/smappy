@@ -44,7 +44,7 @@ class MapStyle:
         return '#FFFF00'
 
     def get_neutral_color(self):
-        return '#999999'
+        return '#CCCCCC'
 
     def get_cyan_color(self):
         return '#00FFFF'
@@ -205,7 +205,7 @@ map_views = {
                         width = 1600, height = 800),
     'world' : MapView(east = -160, west = 160, south = -57, north = 84,
                       width = 3000, height = 2000),
-    'germany' : MapView(west = 5, east = 20, north = 52, south = 46,
+    'germany' : MapView(west = 5, east = 20, north = 56, south = 46,
                       width = 1800, height = 1600),
     'ukraine' : MapView(north = 52.6, west = 21.7,
                         south = 44.4, east = 41.6,
@@ -217,8 +217,21 @@ map_views = {
 
 default_map_style = MapStyle()
 
+DEFAULT_RIVERS = [
+    ('name', 'Volga'),
+    ('name', 'Dnipro'),
+    ('name', 'Don'),
+    ('name', 'Kama'),
+    ('name', 'Tigris'),
+    ('name', 'Euphrates'),
+    ('name', 'Nile'),
+    ('name', 'Rosetta Branch'),
+    ('name', 'Damietta Branch'),
+    ('dissolve', '634River'),
+]
+
 def build_natural_earth(view, shapedir, map_style = default_map_style,
-                        elevation = False):
+                        elevation = False, rivers = DEFAULT_RIVERS):
     themap = native.NativeMap(view,
                               background_color = map_style._lake_fill_color)
 
@@ -243,24 +256,11 @@ def build_natural_earth(view, shapedir, map_style = default_map_style,
                       line_color = map_style._lake_line_color,
                       line_width = map_style._lake_line_width,)
 
-    chosen_rivers = [
-        ('name', 'Volga'),
-        ('name', 'Dnipro'),
-        ('name', 'Don'),
-        ('name', 'Kama'),
-        ('name', 'Tigris'),
-        ('name', 'Euphrates'),
-        ('name', 'Nile'),
-        ('name', 'Rosetta Branch'),
-        ('name', 'Damietta Branch'),
-        ('dissolve', '634River'),
-   ]
-
-    rivers = shapedir + 'ne_10m_rivers_lake_centerlines/ne_10m_rivers_lake_centerlines.shp'
-    themap.add_shapes(rivers,
+    riversfile = shapedir + 'ne_10m_rivers_lake_centerlines/ne_10m_rivers_lake_centerlines.shp'
+    themap.add_shapes(riversfile,
                       line_color = map_style._river_fill_color,
                       line_width = map_style._river_line_width,
-                      selectors = chosen_rivers)
+                      selectors = rivers)
 
     glaciers = shapedir + 'ne_10m_glaciated_areas/ne_10m_glaciated_areas.shp'
     themap.add_shapes(glaciers,
