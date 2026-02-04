@@ -19,6 +19,7 @@ def enable_request_logging():
 SHAPEDIR = os.environ.get('SHAPEDIR') # shapefiles must be located here
 ROOT = Path(__file__).parent
 MIN_SIMILARITY = 5
+CACHE = ROOT / 'blob-cache'
 
 class BlobCache:
 
@@ -29,7 +30,7 @@ class BlobCache:
         }
 
     def get_blob(self, name):
-        blob = ROOT / 'blob-cache' / name
+        blob = CACHE / name
         if not blob.exists():
             print('Retrieving', repr(self._file_urls[name]))
             resp = urllib.request.urlopen(self._file_urls[name])
@@ -115,12 +116,14 @@ def img_diff(f1, f2):
     return total / (length * 3)
 
 cache = BlobCache()
+if not CACHE.exists():
+    CACHE.mkdir()
 
 # ensure natural earth is in place
 if not SHAPEDIR:
     cache.get_blob('natural-earth.zip')
-    if not (ROOT / 'blob-cache' / 'ne_10m_admin_0_countries').exists():
+    if not (CACHE / 'ne_10m_admin_0_countries').exists():
         print('Unzipping natural-earth.zip')
-        ne = zipfile.ZipFile(ROOT / 'blob-cache' / 'natural-earth.zip')
-        ne.extractall(path = ROOT / 'blob-cache')
-    SHAPEDIR = str(ROOT / 'blob-cache') + os.sep
+        ne = zipfile.ZipFile(CACHE / 'natural-earth.zip')
+        ne.extractall(path = CACHE)
+    SHAPEDIR = str(CACHE) + os.sep
