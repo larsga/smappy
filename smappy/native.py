@@ -467,7 +467,7 @@ class PdfDrawer:
 
     def __init__(self, width, height, background):
         self._size = (width, height)
-        self._pdf = fpdf.FPDF()
+        self._pdf = fpdf.FPDF(unit='mm')
         self._pdf.add_page(format = self._size)
 
         (r, g, b) = background.as_int_tuple(255)
@@ -523,46 +523,44 @@ class PdfDrawer:
 
     def get_bbox(self, text, style):
         'returns (left, top, right, bottom)'
-        self._install_font(style)
-        #self._pdf.get_string_width(text)
-        estimate = (len(text) / 2.8) * style.get_font_size()
-        return (0, 0, estimate, style.get_font_size())
-
-    def _install_font(self, style):
-        pass
-
-        # FIXME: not sure how to get this to work again
-
-        # font = style.get_font_name()
-        # if font not in self._installed_fonts:
-        #     self._pdf.add_font(family = extract_font_name(font), fname = font)
-        #     self._installed_fonts.add(font)
+        self._set_font(style)
+        width = self._pdf.get_string_width(text)
+        return (0, 0, width, style.get_font_size() / 2.4)
 
     def text(self, point, text, style):
-        self._install_font(style)
-        self._pdf.set_font(extract_font_name(style.get_font_name()))
+        self._set_font(style)
+        if style.get_halo_color():
+            with self._pdf.local_context(
+                    text_mode = 'FILL_STROKE',
+                    draw_color = style.get_halo_color().as_int_tuple(255),
+                    line_width = style.get_halo_radius()):
+                self._text(point, text, style, style.get_font_color())
+        else:
+            self._text(point, text, style, style.get_font_color())
 
-        # this doesn't work -- need thicker version of the text, basically
-        if False and style.get_halo_color():
-            self._pdf.set_font_size((style.get_font_size() + style.get_halo_radius()) * 2)
-            (r, g, b) = style.get_halo_color().as_int_tuple(255)
-            #self._pdf.set_text_color(r, g, b)
-            self._pdf.set_text_color(255, 0, 0)
-            height = self._pdf.get_string_width('x') * 2.2
-            self._pdf.text(point[0], point[1] + height, text)
-
-        (r, g, b) = style.get_font_color().as_int_tuple(255)
+    def _text(self, point, text, style, color):
+        (r, g, b) = color.as_int_tuple(255)
         self._pdf.set_text_color(r, g, b)
-        self._pdf.set_font_size(style.get_font_size() * 2)
         # Pillow has the text anchor top left, but fpdf has bottom left
-        height = self._pdf.get_string_width('x') * 2.2
-        self._pdf.text(point[0], point[1] + height, text)
+        height = style.get_font_size() / 2
+        self._pdf.text(point[0], point[1] + (height * 1.5), text)
 
     def bitmap(self, image, pos, mask):
         print('WARN: No bitmap support in PDF')
 
     def write_to(self, filename):
         self._pdf.output(filename)
+
+    def _install_font(self, style):
+        font = style.get_font_name()
+        if font not in self._installed_fonts:
+            self._pdf.add_font(family = extract_font_name(font), fname = font)
+            self._installed_fonts.add(font)
+
+    def _set_font(self, style):
+        self._install_font(style)
+        self._pdf.set_font(extract_font_name(style.get_font_name()),
+                           size = style.get_font_size() * 2)
 
 def extract_font_name(filename):
     ix = filename.rfind('/')
@@ -700,6 +698,7 @@ def find_correct_north(lng, lat, projector):
         lat += 0.01
         pos = projector((lng, lat))
     return lat
+
 # ===========================================================================
 # DASHED LINE IMPLEMENTATION
 
