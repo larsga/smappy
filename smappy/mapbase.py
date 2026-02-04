@@ -198,7 +198,7 @@ class Marker:
         return self._scale
 
     def get_line_width(self):
-        return 1.5
+        return self._line_width
 
     def get_text_color(self):
         return to_color('black')
