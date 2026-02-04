@@ -87,7 +87,7 @@ class TextStyle:
     def __init__(self, font_name = None, font_size = None, font_color = None,
                  halo_color = None, halo_radius = 0,
                  text_align = TextAlignment.LEFT):
-        self._font_name = font_name or 'DejaVu Sans Book'
+        self._font_name = font_name or '/Users/larsga/cvs-co/mapnik/fonts/dejavu-fonts-ttf-2.37/ttf/DejaVuSans.ttf'
         self._font_size = font_size or 30
         self._font_color = to_color(font_color or '#ffffff')
         self._halo_color = to_color(halo_color or '#000000')
@@ -163,7 +163,8 @@ class Marker:
                  title_display: TitleDisplay = TitleDisplay.NO_DISPLAY,
                  shape: Shape = Shape.CIRCLE,
                  marker_id: str|None = None,
-                 line_color: Color = to_color('black')):
+                 line_color: Color = 'black',
+                 line_width: float = 1.5):
         '''label: name for the class of things represented by the marker'''
         self._fill_color = to_color(fill_color)
         self._label = label
@@ -172,7 +173,8 @@ class Marker:
         self._title_display = title_display
         self._shape = shape
         self._id = marker_id or 'marker%s' % id(self)
-        self._line_color = line_color
+        self._line_color = to_color(line_color)
+        self._line_width = line_width
 
     def get_id(self):
         return self._id
