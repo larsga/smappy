@@ -2,12 +2,12 @@
 # grayscale map style
 
 border_fill_color = '#BBBBBB'
-border_line_color = 'rgb(10%,10%,10%)'
-border_line_width = 2.5
+border_line_color = 'rgb(30%,30%,30%)'
+border_line_width = 1
 
-lake_fill_color = '#e6e6e6'
+lake_fill_color = '#eaeaea'
 
-river_fill_color = '#e6e6e6'
+river_fill_color = '#eaeaea'
 river_line_width = 2
 
 glacier_fill_color = '#ffffff'
