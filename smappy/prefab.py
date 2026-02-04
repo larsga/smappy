@@ -19,17 +19,23 @@ DARK_STOPS = [
 
 class MapStyle:
 
-    def __init__(self):
-        self._border_fill_color = '#409050'
+    def __init__(self, ocean_color = None, land_color = None,
+                 border_line_width = None,
+                 lake_color = None,
+                 lake_line_color = None, lake_line_width = None,
+                 river_color = None,
+                 river_line_width = None):
+        self._ocean_color = ocean_color or '#88CCFF'
+        self._border_fill_color = land_color or '#409050'
         self._border_line_color = 'rgb(10%,10%,10%)'
-        self._border_line_width = 1.5
+        self._border_line_width = border_line_width or 1.5
 
-        self._lake_fill_color = '#88CCFF'
-        self._lake_line_color = None
-        self._lake_line_width = None
+        self._lake_fill_color = lake_color or '#88CCFF'
+        self._lake_line_color = lake_line_color
+        self._lake_line_width = lake_line_width
 
-        self._river_fill_color = '#88CCFF'
-        self._river_line_width = 1
+        self._river_fill_color = river_color or '#88CCFF'
+        self._river_line_width = river_line_width or 1
 
         self._glacier_fill_color = '#eeeeee'
         self._glacier_line_color = None
@@ -64,6 +70,9 @@ class MapStyle:
     def get_red_color(self):
         return '#FF0000'
 
+    def get_white_color(self):
+        return '#FFFFFF'
+
     def get_elevation(self):
         return self._elevation
 
@@ -71,6 +80,8 @@ def load_map_style(filename : str) -> MapStyle:
     data = tomllib.load(open(filename, 'rb'))
 
     style = MapStyle()
+    style._ocean_color = data.get('ocean_color')
+
     style._border_fill_color = data.get('border_fill_color')
     style._border_line_color = data.get('border_line_color')
     style._border_line_width = data.get('border_line_width')
@@ -185,7 +196,7 @@ map_views = {
                             width = 1800, height = 1400),
     'europe-all' : MapView(west = -7, east = 50, north = 67, south = 41,
                            width = 2000, height = 1600),
-    'europe-all-big' : MapView(east = 57, west = -8, south = 34, north = 71,
+    'europe-all-big' : MapView(east = 57, west = -8, south = 39, north = 76,
                                width = 2000, height = 1600),
     'norway-sweden' : MapView(east = 6, west = 18, south = 57.9, north = 63.9,
                               width = 1800, height = 1200),
@@ -203,7 +214,7 @@ map_views = {
                         width = 1600, height = 1000),
     'georgia' : MapView(east = 41, west = 49, south = 40, north = 45,
                         width = 1600, height = 800),
-    'world' : MapView(east = -160, west = 160, south = -57, north = 84,
+    'world' : MapView(west = -160, east = 160, south = -57, north = 84,
                       width = 3000, height = 2000),
     'germany' : MapView(west = 5, east = 20, north = 56, south = 46,
                       width = 1800, height = 1600),
@@ -233,7 +244,7 @@ DEFAULT_RIVERS = [
 def build_natural_earth(view, shapedir, map_style = default_map_style,
                         elevation = False, rivers = DEFAULT_RIVERS):
     themap = native.NativeMap(view,
-                              background_color = map_style._lake_fill_color)
+                              background_color = map_style._ocean_color)
 
     borders = shapedir + '/ne_10m_admin_0_countries/ne_10m_admin_0_countries.shp'
     themap.add_shapes(borders,
@@ -250,17 +261,17 @@ def build_natural_earth(view, shapedir, map_style = default_map_style,
                           line_color = map_style._border_line_color,
                           line_width = map_style._border_line_width)
 
-    lakes = shapedir + 'ne_10m_lakes/ne_10m_lakes.shp'
-    themap.add_shapes(lakes,
-                      fill_color = map_style._lake_fill_color,
-                      line_color = map_style._lake_line_color,
-                      line_width = map_style._lake_line_width,)
-
     riversfile = shapedir + 'ne_10m_rivers_lake_centerlines/ne_10m_rivers_lake_centerlines.shp'
     themap.add_shapes(riversfile,
                       line_color = map_style._river_fill_color,
                       line_width = map_style._river_line_width,
                       selectors = rivers)
+
+    lakes = shapedir + 'ne_10m_lakes/ne_10m_lakes.shp'
+    themap.add_shapes(lakes,
+                      fill_color = map_style._lake_fill_color,
+                      line_color = map_style._lake_line_color,
+                      line_width = map_style._lake_line_width)
 
     glaciers = shapedir + 'ne_10m_glaciated_areas/ne_10m_glaciated_areas.shp'
     themap.add_shapes(glaciers,
