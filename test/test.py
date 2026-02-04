@@ -1,8 +1,20 @@
 
-import unittest, tempfile, os
+import unittest, tempfile, os, urllib, logging
+from http.client import HTTPConnection
 from pathlib import Path
 from PIL import Image
 from smappy import mapbase, googlemap, prefab
+
+def enable_request_logging():
+    HTTPConnection.debuglevel = 1
+
+    logging.basicConfig()
+    logging.getLogger().setLevel(logging.DEBUG)
+    requests_log = logging.getLogger("requests.packages.urllib3")
+    requests_log.setLevel(logging.DEBUG)
+    requests_log.propagate = True
+
+#enable_request_logging()
 
 SHAPEDIR = os.environ.get('SHAPEDIR') # shapefiles must be located here
 ROOT = Path(__file__).parent
@@ -10,8 +22,24 @@ MIN_SIMILARITY = 5
 
 class BlobCache:
 
+    def __init__(self):
+        self._file_urls = {
+            name : url for (url, name) in
+            [line.split() for line in open(ROOT / 'files.txt')]
+        }
+
     def get_blob(self, name):
         blob = ROOT / 'blob-cache' / name
+        if not blob.exists():
+            # print('Retrieving', repr(self._file_urls[name]))
+            resp = urllib.request.urlopen(self._file_urls[name])
+            with open(blob, 'wb') as f:
+                buffer = resp.read(16384)
+                while buffer:
+                    f.write(buffer)
+                    buffer = resp.read(16384)
+            resp.close()
+
         return blob
 
 class TestMaps(unittest.TestCase):
@@ -87,3 +115,7 @@ def img_diff(f1, f2):
     return total / (length * 3)
 
 cache = BlobCache()
+
+# ensure natural earth is in place
+
+cache.get_blob('natural-earth.zip')
