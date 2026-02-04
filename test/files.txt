@@ -1,0 +1,3 @@
+https://www.garshol.priv.no/tmp/simple-native.png simple-native.png
+https://www.garshol.priv.no/tmp/elevation-native.png elevation-native.png
+https://www.garshol.priv.no/tmp/natural-earth.zip natural-earth.zip

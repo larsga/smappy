@@ -204,8 +204,6 @@ class OverlapIndex:
         pbbox = (pt[0] + radius + 3, pos[1],
                  pt[0] + radius + 3 + width, pt[1] + (height))
 
-        line_format = mapbase.to_line_format('black', 1)
-
         otext = self.overlaps(pbbox)
         if otext:
             # print('Overlaps: %s with %s' % (text, otext))

@@ -1,5 +1,5 @@
 
-import unittest, tempfile, os, urllib, logging
+import unittest, tempfile, os, urllib, logging, zipfile
 from http.client import HTTPConnection
 from pathlib import Path
 from PIL import Image
@@ -31,7 +31,7 @@ class BlobCache:
     def get_blob(self, name):
         blob = ROOT / 'blob-cache' / name
         if not blob.exists():
-            # print('Retrieving', repr(self._file_urls[name]))
+            print('Retrieving', repr(self._file_urls[name]))
             resp = urllib.request.urlopen(self._file_urls[name])
             with open(blob, 'wb') as f:
                 buffer = resp.read(16384)
@@ -117,5 +117,10 @@ def img_diff(f1, f2):
 cache = BlobCache()
 
 # ensure natural earth is in place
-
-cache.get_blob('natural-earth.zip')
+if not SHAPEDIR:
+    cache.get_blob('natural-earth.zip')
+    if not (ROOT / 'blob-cache' / 'ne_10m_admin_0_countries').exists():
+        print('Unzipping natural-earth.zip')
+        ne = zipfile.ZipFile(ROOT / 'blob-cache' / 'natural-earth.zip')
+        ne.extractall(path = ROOT / 'blob-cache')
+    SHAPEDIR = str(ROOT / 'blob-cache') + os.sep
