@@ -212,12 +212,13 @@ class Marker:
 class PositionedMarker:
 
     def __init__(self, lat: float, lng: float, title: str, marker: Marker,
-                 data: dict = {}):
+                 data: dict = {}, descr = None):
         self._lat = float(lat)
         self._lng = float(lng)
         self._title = title
         self._marker = marker
         self._data = data
+        self._descr = descr
 
     def get_id(self):
         return 'posm%s' % id(self)
@@ -235,7 +236,7 @@ class PositionedMarker:
         return self._marker
 
     def get_description(self):
-        return None
+        return self._descr
 
     def get_data(self):
         return self._data
@@ -345,7 +346,8 @@ class AbstractMap:
     def add_marker(self, lat: float, lng: float, title: str,
                    marker: Marker, descr : str|None = None,
                    data: dict = {}):
-        self._markers.append(PositionedMarker(lat, lng, title, marker, data))
+        self._markers.append(PositionedMarker(lat, lng, title, marker, data,
+                                              descr))
         self._symbols.add(marker)
 
     def get_marker_types(self):
