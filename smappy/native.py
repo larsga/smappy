@@ -62,9 +62,10 @@ class NativeMap(mapbase.AbstractMap):
         for marker in self._markers: # FIXME: skip if no text placement
             pt = (marker.get_longitude(), marker.get_latitude())
             pt = projector(pt)
-            radius = ((marker.get_marker().get_scale() or 10) + 2)
-            bboxer.add_bbox((pt[0] - (radius + 2), pt[1] - (radius + 2),
-                             pt[0] + (radius + 2), pt[1] + (radius + 2)))
+            radius = ((marker.get_marker().get_scale() or 10))
+            bboxer.add_bbox((pt[0] - radius, pt[1] - radius,
+                             pt[0] + radius, pt[1] + radius),
+                            'marker')
 
         for marker in self._markers:
             mf = marker.get_marker()
@@ -84,7 +85,10 @@ class NativeMap(mapbase.AbstractMap):
                                             marker.get_title(),
                                             bbox,
                                             radius)
-            drawer.text(pos, marker.get_title(), mf.get_text_style())
+            if pos:
+                drawer.text(pos, marker.get_title(), mf.get_text_style())
+
+        #self._draw_overlap_boxes(drawer, bboxer) # for debug
 
         for (text, lat, lng, style) in self._labels:
             pt = projector((lng, lat))
@@ -97,11 +101,19 @@ class NativeMap(mapbase.AbstractMap):
         if self._view.transform:
             self._view.transform(filename, None)
 
+    def _draw_overlap_boxes(self, drawer, bboxer):
+        lf = mapbase.to_line_format('#000000', 2)
+        for (bbox, text) in bboxer._bboxes:
+            (x1, y1, x2, y2) = bbox
+            drawer.polygon(
+                [(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)], lf, None
+            )
+
     def _add_legend(self, drawer):
         used_symbols = list(self._symbols)
         legend_scale = self._legend.get_scale()
 
-        style = mapbase.TextStyle(font_name = 'Arial',
+        style = mapbase.TextStyle(font_name = '/System/Library/Fonts/Supplemental/Arial.ttf',
                                   font_size = 24 * self._legend.get_scale(),
                                   font_color = '#000000')
 
@@ -188,31 +200,39 @@ class OverlapIndex:
         width = bbox[2] - bbox[0]
 
         # first try on the right
-        pos = (pt[0] + radius, pt[1] - (height - 5))
+        pos = (pt[0] + radius, pt[1] - (height))
         pbbox = (pt[0] + radius + 3, pos[1],
-                 pt[0] + radius + 3 + width, pt[1] + (height - 5))
+                 pt[0] + radius + 3 + width, pt[1] + (height))
 
-        if self.overlaps(pbbox):
-            # print('Overlaps: ', text)
+        line_format = mapbase.to_line_format('black', 1)
+
+        otext = self.overlaps(pbbox)
+        if otext:
+            # print('Overlaps: %s with %s' % (text, otext))
             # okay, so let's try on the left, then
-            pos = (pt[0] - radius - width, pt[1] - (height - 5))
-            pbbox = (pt[0] + radius + 3 - width, pos[1],
-                     pt[0] + radius + 3, pt[1] + (height - 5))
+            pos = (pt[0] - radius - width, pt[1] - (height))
+            pbbox = (pt[0] - radius - 3 - width, pos[1],
+                     pt[0] - radius - 3, pt[1] + (height))
+
+            # if it overlaps we give up and don't render it at all
+            otext = self.overlaps(pbbox)
+            if otext:
+                return None
         # else:
         #     print('Overlaps not:', text)
 
-        self._bboxes.append(pbbox)
+        self._bboxes.append((pbbox, text))
 
         return pos
 
-    def add_bbox(self, bbox):
-        self._bboxes.append(bbox)
+    def add_bbox(self, bbox, text):
+        self._bboxes.append((bbox, text))
 
     def overlaps(self, pbbox):
-        for bbox in self._bboxes:
+        for (bbox, text) in self._bboxes:
             if overlaps(bbox, pbbox):
-                return True
-        return False
+                return text
+        return None
 
 def overlaps(bbox1, bbox2):
     (ax1, ay1, ax2, ay2) = bbox1
