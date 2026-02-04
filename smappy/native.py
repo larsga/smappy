@@ -301,7 +301,10 @@ def extract_features_shp(filename, selectors):
 
     reader.close()
 
-    return filter_features(selectors, geojson_data['features'])
+    if selectors:
+        return filter_features(selectors, geojson_data['features'])
+    else:
+        return geojson_data['features']
 
 def extract_features_geojson(filename, selectors):
     return filter_features(selectors, json.load(open(filename))['features'])
