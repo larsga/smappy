@@ -309,7 +309,7 @@ def extract_features_geojson(filename, selectors):
 
 def filter_features(selectors, features):
     if selectors:
-        if type(selectors) == type([]):
+        if isinstance(selectors, list):
             by_prop = {}
             for (idprop, idval) in selectors:
                 if idprop not in by_prop:
