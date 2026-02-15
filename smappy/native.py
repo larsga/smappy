@@ -274,10 +274,10 @@ def make_projector(view, width, height):
 RADIUS = 6378137.0 # in meters on the equator
 
 def lat2y(a):
-  return math.log(math.tan(math.pi / 4 + math.radians(a) / 2)) * RADIUS
+    return math.log(math.tan(math.pi / 4 + math.radians(a) / 2)) * RADIUS
 
 def lon2x(a):
-  return math.radians(a) * RADIUS
+    return math.radians(a) * RADIUS
 
 def project(lnglat):
     (lng, lat) = lnglat

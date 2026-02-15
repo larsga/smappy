@@ -224,6 +224,8 @@ map_views = {
     'finland' : MapView(north = 70.24, west = 19.43,
                         south = 59.44, east = 33,
                         width = 1000, height = 2000),
+    'europe-full' : MapView(west = -12, east = 57, south = 33, north = 70,
+                               width = 2000, height = 2000),
 }
 
 default_map_style = MapStyle()
