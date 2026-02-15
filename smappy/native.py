@@ -309,21 +309,25 @@ def extract_features_geojson(filename, selectors):
 
 def filter_features(selectors, features):
     if selectors:
-        by_prop = {}
-        for (idprop, idval) in selectors:
-            if idprop not in by_prop:
-                by_prop[idprop] = set()
-            by_prop[idprop].add(idval)
+        if type(selectors) == type([]):
+            by_prop = {}
+            for (idprop, idval) in selectors:
+                if idprop not in by_prop:
+                    by_prop[idprop] = set()
+                by_prop[idprop].add(idval)
+
+            def check(props, by_prop = by_prop):
+                for (propname, values) in by_prop.items():
+                    if props.get(propname) in values:
+                        return True
+                return False
+        else:
+            check = selectors
 
         accepted = []
         for f in features:
             props = f['properties']
-            ok = False
-            for (propname, values) in by_prop.items():
-                if props.get(propname) in values:
-                    ok = True
-                    break
-            if ok:
+            if check(props):
                 accepted.append(f)
         features = accepted
     return features

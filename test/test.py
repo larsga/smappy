@@ -95,6 +95,22 @@ class TestMaps(unittest.TestCase):
             base = cache.get_blob('elevation-native.png')
             self.assertTrue(img_eq(base, tstfile + '.png'))
 
+    def test_function_selector_png(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tstfile = tmpdir + '/' + 'tst'
+
+            def selector(props):
+                return props['name'] in ('Rhine', 'Main')
+
+            view = prefab.MapView(west = 5, east = 28, north = 56, south = 46,
+                                  width = 2000, height = 1600)
+            themap = prefab.build_natural_earth(view, SHAPEDIR,
+                                                rivers = selector)
+            themap.render_to(tstfile)
+
+            base = cache.get_blob('simple-native.png')
+            self.assertTrue(img_eq(base, tstfile + '.png'))
+
 def img_eq(f1, f2):
     return img_diff(f1, f2) < MIN_SIMILARITY
 
