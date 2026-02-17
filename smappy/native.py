@@ -552,8 +552,6 @@ class PdfDrawer:
         (r, g, b) = color.as_int_tuple(255)
         self._pdf.set_text_color(r, g, b)
         # Pillow has the text anchor top left, but fpdf has bottom left
-        height = style.get_font_size() / 2
-        self._pdf.text(point[0], point[1] + (height * 1.5), text)
         (x1, y1, x2, y2) = self.get_bbox(text, style)
         height = y2 - y1
         width = x2 - y1

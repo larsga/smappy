@@ -364,7 +364,8 @@ class AbstractMap:
                        line_width: Optional[float] = None,
                        undefined_color: Optional[str] = None,
                        levels: int = 10,
-                       label_formatter = None):
+                       label_formatter = None,
+                       colors = None):
         line = to_line_format(line_color, line_width)
         undefined_color = to_color(undefined_color) or Color(0.6, 0.6, 0.6)
         label_formatter = label_formatter or \
@@ -376,7 +377,7 @@ class AbstractMap:
         inc = (biggest - lowest) / levels
 
         colormapping = {}
-        colors = make_color_scale(levels)
+        colors = colors or make_color_scale(levels)
         for (idprop, idvalue, value) in region_mapping:
             ix = int(round((value - lowest) / inc)) if value is not None else None
             color = colors[max(0, ix - 1)] if ix is not None else undefined_color
