@@ -525,9 +525,17 @@ class PdfDrawer:
 
     def get_bbox(self, text, style):
         'returns (left, top, right, bottom)'
+        # we're using a Pillow class here, because it gets the correct
+        # height (and fpdf2 doesn't give height)
+        font = ImageFont.truetype(style.get_font_name(),
+                                  style.get_font_size(),
+                                  encoding = 'unic')
+        (x1, y1, x2, y2) = font.getbbox(text)
+
+        # then using fpdf to get correct width
         self._set_font(style)
         width = self._pdf.get_string_width(text)
-        return (0, 0, width, style.get_font_size() / 2.4)
+        return (0, 0, width, y2 - y1)
 
     def text(self, point, text, style):
         self._set_font(style)
@@ -546,6 +554,15 @@ class PdfDrawer:
         # Pillow has the text anchor top left, but fpdf has bottom left
         height = style.get_font_size() / 2
         self._pdf.text(point[0], point[1] + (height * 1.5), text)
+        (x1, y1, x2, y2) = self.get_bbox(text, style)
+        height = y2 - y1
+        width = x2 - y1
+
+        if style.get_text_align() == mapbase.TextAlignment.CENTERED:
+            offset = width / 2
+            point = (point[0] - offset, point[1])
+
+        self._pdf.text(point[0], point[1] + height, text)
 
     def bitmap(self, image, pos, mask):
         print('WARN: No bitmap support in PDF')
@@ -562,7 +579,7 @@ class PdfDrawer:
     def _set_font(self, style):
         self._install_font(style)
         self._pdf.set_font(extract_font_name(style.get_font_name()),
-                           size = style.get_font_size() * 2)
+                           size = style.get_font_size() * 3)
 
 def extract_font_name(filename):
     ix = filename.rfind('/')
