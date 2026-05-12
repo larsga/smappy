@@ -2,6 +2,7 @@
 import re
 from enum import Enum
 from typing import Optional
+from collections.abc import Callable
 
 class SmappyException(Exception):
     pass
@@ -273,12 +274,13 @@ class ShapeLayer:
 
     def __init__(self, geometry_file: str, line: Optional[LineFormat],
                  fill_color: Optional[Color], fill_opacity: float = 1.0,
-                 selectors: list = []):
+                 selectors: list = [], filter: Callable = None):
         self._geometry_file = geometry_file
         self._line = line
         self._fill_color = fill_color
         self._fill_opacity = fill_opacity
         self._selectors = selectors
+        self._filter = filter
 
     def get_geometry_file(self):
         return self._geometry_file
@@ -294,6 +296,9 @@ class ShapeLayer:
 
     def get_selectors(self):
         return self._selectors
+
+    def get_filter(self):
+        return self._filter
 
 class RasterLayer:
 
@@ -325,12 +330,13 @@ class AbstractMap:
                    line_dash: Optional[tuple] = None,
                    fill_color: Optional[str] = None,
                    fill_opacity: float = 1.0,
+                   filter: Callable = None,
                    selectors: Optional[list] = None) -> None:
         line = to_line_format(line_color, line_width, line_dash)
         self._layers.append(ShapeLayer(geometry_file, line,
                                        to_color(fill_color),
                                        fill_opacity,
-                                       selectors))
+                                       selectors, filter))
 
     def add_raster(self, rasterfile, stops):
         self._layers.append(RasterLayer(rasterfile, stops))

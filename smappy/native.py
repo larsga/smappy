@@ -37,7 +37,8 @@ class NativeMap(mapbase.AbstractMap):
         for layer in self._layers:
             if isinstance(layer, mapbase.ShapeLayer):
                 features = extract_features(layer.get_geometry_file(),
-                                            layer.get_selectors())
+                                            layer.get_selectors(),
+                                            layer.get_filter())
                 for feature in features:
                     (linestrings, closed) = convert_to_linestrings(feature)
                     for linestring in linestrings:
@@ -285,29 +286,29 @@ def project(lnglat):
 
 # --- FORMAT HANDLING
 
-def extract_features(filename, selectors):
+def extract_features(filename, selectors, filter):
     if filename.endswith('.shp'):
-        return extract_features_shp(filename, selectors)
+        return extract_features_shp(filename, selectors, filter)
     elif filename.endswith('.json') or filename.endswith('.geojson'):
-        return extract_features_geojson(filename, selectors)
+        return extract_features_geojson(filename, selectors, filter)
     assert False
 
-def extract_features_shp(filename, selectors):
+def extract_features_shp(filename, selectors, filter):
     reader = shapefile.Reader(filename)
 
     geojson_data = reader.__geo_interface__
 
     reader.close()
 
-    if selectors:
-        return filter_features(selectors, geojson_data['features'])
+    if selectors or filter:
+        return filter_features(selectors, filter, geojson_data['features'])
     else:
         return geojson_data['features']
 
-def extract_features_geojson(filename, selectors):
-    return filter_features(selectors, json.load(open(filename))['features'])
+def extract_features_geojson(filename, selectors, filter):
+    return filter_features(selectors, filter, json.load(open(filename))['features'])
 
-def filter_features(selectors, features):
+def filter_features(selectors, filter, features):
     if selectors:
         if isinstance(selectors, list):
             by_prop = {}
@@ -330,6 +331,10 @@ def filter_features(selectors, features):
             if check(props):
                 accepted.append(f)
         features = accepted
+
+    elif filter:
+        features = [f for f in features if filter(f['properties'])]
+
     return features
 
 def convert_to_linestrings(feature):
